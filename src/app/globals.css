@@ -22,51 +22,55 @@
   --font-mono: "SFMono-Regular", "Consolas", monospace;
 }
 
-html {
-  scroll-behavior: smooth;
-}
-
+html { scroll-behavior: smooth; }
 body {
   margin: 0;
   min-height: 100vh;
+  max-width: 100%;
+  overflow-x: hidden;
   background: var(--brand-background);
   color: var(--brand-charcoal);
   font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
+*, *::before, *::after { box-sizing: border-box; }
+img, svg, video, canvas { max-width: 100%; }
+img { display: block; }
+button, input, select, textarea { font: inherit; max-width: 100%; }
+button, a { -webkit-tap-highlight-color: transparent; }
+main { min-width: 0; background: var(--brand-background); }
+::selection { background: rgba(196, 154, 120, 0.25); }
 
-* {
-  box-sizing: border-box;
+.flex > *, .grid > *, form > *, aside > * { min-width: 0; }
+
+@media (max-width: 639px) {
+  h1 { font-size: clamp(1.75rem, 8vw, 2.25rem); line-height: 1.08; }
+  h2 { font-size: clamp(1.25rem, 6vw, 1.75rem); line-height: 1.15; }
+  p, label, input, select, textarea, button { overflow-wrap: anywhere; }
+  form .rounded-\[30px\], aside .rounded-\[30px\], .rounded-\[36px\] { border-radius: 1.25rem; }
+  form .border-b, aside .border-b { min-width: 0; }
+  form .border-b > *, aside .border-b > * { min-width: 0; }
+  form button > div, form [class*="justify-between"] { min-width: 0; }
+  form span, form p, aside span, aside p { overflow-wrap: anywhere; }
 }
 
-img {
-  max-width: 100%;
-  display: block;
-}
-
-button,
-input,
-select {
-  font: inherit;
-}
-
-main {
-  background: var(--brand-background);
-}
-
-::selection {
-  background: rgba(196, 154, 120, 0.25);
+@media (max-width: 420px) {
+  .px-4 { padding-left: 0.875rem; padding-right: 0.875rem; }
+  form .p-6, aside .p-6 { padding: 1rem; }
+  form .p-8 { padding: 1rem; }
+  form .gap-10 { gap: 1.5rem; }
+  form .space-y-8 > :not([hidden]) ~ :not([hidden]) { margin-top: 1.5rem; }
+  form .sm\:grid-cols-2 { grid-template-columns: minmax(0, 1fr); }
+  form .sm\:grid-cols-3 { grid-template-columns: minmax(0, 1fr); }
+  form .sm\:col-span-2 { grid-column: auto; }
+  aside .flex.items-center.justify-between { align-items: flex-start; gap: 0.75rem; }
+  aside .flex.items-center.justify-between > :last-child { text-align: right; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  html {
-    scroll-behavior: auto;
-  }
-
-  *,
-  *::before,
-  *::after {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
@@ -74,119 +78,25 @@ main {
   }
 }
 
-/* ---------------------------
-   Motion tokens & keyframes
-   Subtle, reusable animations for fade-up, floating, and bumps.
-   All animations use opacity/transform only (GPU-accelerated).
-   Disabled for users who prefer reduced motion (see media query below).
-   --------------------------- */
-
 :root {
-  /* durations */
   --motion-fast: 160ms;
   --motion-medium: 320ms;
-  /* motion-float is intentionally slow and gentle (~3s) */
   --motion-slow: 3000ms;
-  /* easing */
   --motion-ease: cubic-bezier(0.2, 0.9, 0.2, 1);
 }
 
-@keyframes fade-up {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
+@keyframes fade-up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes float-slow { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+@keyframes bump { 0%, 100% { transform: scale(1); } 30% { transform: scale(1.12); } }
+.motion-fade-up { opacity: 1; animation: fade-up var(--motion-medium) var(--motion-ease) both; will-change: transform, opacity; }
+.motion-fade-up.fast { animation-duration: var(--motion-fast); }
+.motion-fade-up.slow { animation-duration: var(--motion-slow); }
+.motion-float { animation: float-slow var(--motion-slow) var(--motion-ease) infinite; will-change: transform; transform-origin: center; pointer-events: none; opacity: 0.95; }
+.motion-bump { animation: bump var(--motion-fast) var(--motion-ease) both; will-change: transform; }
+.motion-pressable { transition: transform var(--motion-fast) var(--motion-ease), box-shadow var(--motion-fast) var(--motion-ease); will-change: transform, box-shadow; }
+.motion-accelerated { transform: translateZ(0); }
 
-@keyframes float-slow {
-  0% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-6px);
-  }
-  100% {
-    transform: translateY(0);
-  }
-}
-
-@keyframes bump {
-  0% {
-    transform: scale(1);
-  }
-  30% {
-    transform: scale(1.12);
-  }
-  100% {
-    transform: scale(1);
-  }
-}
-
-/* ---------------------------
-   Reusable motion utility classes
-   Apply these classes to elements (via className or inline style for delay).
-   Examples:
-     - <h1 class="motion-fade-up" style={{ animationDelay: '120ms' }} />
-     - <div class="motion-float" aria-hidden="true" />
-     - button.classList.add('motion-bump')
-   --------------------------- */
-
-.motion-fade-up {
-  /* default visible so elements remain visible if animations fail or are disabled */
-  opacity: 1;
-  animation-name: fade-up;
-  animation-duration: var(--motion-medium);
-  animation-timing-function: var(--motion-ease);
-  animation-fill-mode: both;
-  will-change: transform, opacity;
-}
-.motion-fade-up.fast {
-  animation-duration: var(--motion-fast);
-}
-.motion-fade-up.slow {
-  animation-duration: var(--motion-slow);
-}
-
-.motion-float {
-  animation: float-slow var(--motion-slow) var(--motion-ease) infinite;
-  will-change: transform;
-  transform-origin: center;
-  pointer-events: none; /* decorative only */
-  opacity: 0.95; /* gentle visibility for decorative elements */
-}
-
-.motion-bump {
-  animation: bump var(--motion-fast) var(--motion-ease) both;
-  will-change: transform;
-}
-
-.motion-pressable {
-  transition: transform var(--motion-fast) var(--motion-ease),
-    box-shadow var(--motion-fast) var(--motion-ease);
-  will-change: transform, box-shadow;
-}
-
-/* small helper: hardware-accelerate an element */
-.motion-accelerated {
-  transform: translateZ(0);
-}
-
-/* Respect reduced-motion explicitly for our classes */
 @media (prefers-reduced-motion: reduce) {
-  .motion-fade-up,
-  .motion-float,
-  .motion-bump,
-  .motion-pressable,
-  .motion-accelerated {
-    animation: none !important;
-    transition: none !important;
-  }
-  /* ensure fade-up elements remain visible when animations are disabled */
-  .motion-fade-up {
-    opacity: 1 !important;
-  }
+  .motion-fade-up, .motion-float, .motion-bump, .motion-pressable, .motion-accelerated { animation: none !important; transition: none !important; }
+  .motion-fade-up { opacity: 1 !important; }
 }

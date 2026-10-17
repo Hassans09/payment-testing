@@ -44,28 +44,73 @@ main { min-width: 0; background: var(--brand-background); }
 
 .flex > *, .grid > *, form > *, aside > * { min-width: 0; }
 
-@media (max-width: 639px) {
+@media (max-width: 1023px) {
+  /* Keep the checkout summary readable while it moves below the form. */
+  form, form ~ aside { min-width: 0; }
+  form [class*="justify-between"], aside [class*="justify-between"] { min-width: 0; }
+  form [class*="justify-between"] > *, aside [class*="justify-between"] > * { min-width: 0; }
+}
+
+@media (max-width: 767px) {
   h1 { font-size: clamp(1.75rem, 8vw, 2.25rem); line-height: 1.08; }
   h2 { font-size: clamp(1.25rem, 6vw, 1.75rem); line-height: 1.15; }
-  p, label, input, select, textarea, button { overflow-wrap: anywhere; }
+  p, label, input, select, textarea, button, a { overflow-wrap: anywhere; }
+
+  /* Product detail: stop price/status and selector headers from becoming wide rows. */
+  .flex.items-baseline { flex-wrap: wrap; }
+  .flex.items-center.justify-between { gap: 0.75rem; }
+  .flex.items-center.justify-between > * { min-width: 0; }
+
+  /* Checkout/payment panels: labels, badges and bank details wrap cleanly. */
   form .rounded-\[30px\], aside .rounded-\[30px\], .rounded-\[36px\] { border-radius: 1.25rem; }
   form .border-b, aside .border-b { min-width: 0; }
   form .border-b > *, aside .border-b > * { min-width: 0; }
-  form button > div, form [class*="justify-between"] { min-width: 0; }
   form span, form p, aside span, aside p { overflow-wrap: anywhere; }
+  form [class*="tracking-wider"], aside [class*="tracking-wider"] { letter-spacing: 0.06em; }
+
+  /* Keep cart rows usable when names and prices are long. */
+  article, [class*="rounded-3xl"], [class*="rounded-2xl"] { min-width: 0; }
+  article a, article h3 { overflow-wrap: anywhere; }
 }
 
-@media (max-width: 420px) {
+@media (max-width: 639px) {
+  /* Narrow screens need one-column fields and full-width actions. */
+  form .sm\:grid-cols-2 { grid-template-columns: minmax(0, 1fr); }
+  form .sm\:grid-cols-3 { grid-template-columns: minmax(0, 1fr); }
+  form .sm\:col-span-2 { grid-column: auto; }
+  form .sm\:flex-row { flex-direction: column; }
+  form .sm\:w-36 { width: 100%; }
+  form .sm\:items-center { align-items: stretch; }
+  form .sm\:text-right { text-align: left; }
+
+  /* Header and drawer controls remain inside the viewport. */
+  header .min-w-\[140px\], footer .min-w-\[150px\] { min-width: 0; }
+  header svg { flex-shrink: 0; }
+  .fixed.inset-y-0.right-0 { padding-left: 0; }
+  .fixed.inset-y-0.right-0 > aside { width: min(100vw, 28rem); max-width: 100vw; }
+  .fixed.inset-y-0.right-0 aside > div { min-width: 0; }
+
+  /* Small-screen empty states and content cards use compact padding. */
   .px-4 { padding-left: 0.875rem; padding-right: 0.875rem; }
   form .p-6, aside .p-6 { padding: 1rem; }
   form .p-8 { padding: 1rem; }
   form .gap-10 { gap: 1.5rem; }
   form .space-y-8 > :not([hidden]) ~ :not([hidden]) { margin-top: 1.5rem; }
-  form .sm\:grid-cols-2 { grid-template-columns: minmax(0, 1fr); }
-  form .sm\:grid-cols-3 { grid-template-columns: minmax(0, 1fr); }
-  form .sm\:col-span-2 { grid-column: auto; }
+
+  /* Dense product/account grids collapse before they can become cramped. */
+  .grid.grid-cols-2 { grid-template-columns: minmax(0, 1fr); }
+  .grid.grid-cols-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   aside .flex.items-center.justify-between { align-items: flex-start; gap: 0.75rem; }
   aside .flex.items-center.justify-between > :last-child { text-align: right; }
+}
+
+@media (max-width: 420px) {
+  .text-3xl { font-size: 1.75rem; }
+  .text-4xl { font-size: 2rem; }
+  form .p-6, aside .p-6 { padding: 0.875rem; }
+  form .p-8 { padding: 0.875rem; }
+  form .gap-10 { gap: 1.25rem; }
+  .fixed.inset-y-0.right-0 aside { width: 100vw; }
 }
 
 @media (prefers-reduced-motion: reduce) {

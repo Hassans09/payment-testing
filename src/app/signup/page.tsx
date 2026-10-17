@@ -50,7 +50,7 @@ export default function SignUpPage() {
             Create Account
           </h1>
           <p className="mt-1 text-xs text-[color:var(--brand-charcoal)]/70">
-            Enjoy priority drop notifications, express checkout, and exclusive Nigerian member perks.
+            Create an account to save products, manage addresses, and complete checkout faster.
           </p>
         </div>
 
@@ -93,7 +93,7 @@ export default function SignUpPage() {
                 <input
                   value={form.firstName}
                   onChange={(e) => setForm({ ...form, firstName: e.target.value })}
-                  placeholder="Maya"
+                  placeholder="Alex"
                   className="w-full bg-transparent px-2.5 py-2.5 text-xs text-[color:var(--brand-charcoal)] outline-none"
                 />
               </div>
@@ -108,7 +108,7 @@ export default function SignUpPage() {
                 <input
                   value={form.lastName}
                   onChange={(e) => setForm({ ...form, lastName: e.target.value })}
-                  placeholder="Adeleke"
+                  placeholder="Taylor"
                   className="w-full bg-transparent px-2.5 py-2.5 text-xs text-[color:var(--brand-charcoal)] outline-none"
                 />
               </div>
@@ -125,7 +125,7 @@ export default function SignUpPage() {
                 type="email"
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
-                placeholder="maya@example.ng"
+                placeholder="customer@example.com"
                 className="w-full bg-transparent px-2.5 py-2.5 text-xs text-[color:var(--brand-charcoal)] outline-none"
               />
             </div>
@@ -177,12 +177,12 @@ export default function SignUpPage() {
             disabled={loading}
             className="flex w-full items-center justify-center rounded-full bg-[color:var(--brand-primary)] py-3 text-xs font-bold uppercase tracking-wider text-[color:var(--brand-deep)] shadow-sm hover:bg-[color:var(--brand-secondary)] transition disabled:opacity-60"
           >
-            {loading ? "Creating Account..." : "Create Free Account"}
+            {loading ? "Creating Account..." : "Create Account"}
           </button>
         </form>
 
         <div className="text-center text-xs text-[color:var(--brand-charcoal)]/70 pt-2 border-t border-[color:var(--brand-border)]/60">
-          Already an Atelier member?{" "}
+          Already have an account?{" "}
           <Link href="/signin" className="font-bold text-[color:var(--brand-deep)] hover:underline">
             Sign In
           </Link>

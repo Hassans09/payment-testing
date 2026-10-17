@@ -25,7 +25,7 @@ export default function ForgotPasswordPage() {
             Reset Password
           </h1>
           <p className="mt-1 text-xs text-[color:var(--brand-charcoal)]/70">
-            Enter the email address registered with your Rebel Fashion account.
+            Enter the email address registered with your account.
           </p>
         </div>
 
@@ -58,7 +58,7 @@ export default function ForgotPasswordPage() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="maya@example.ng"
+                  placeholder="customer@example.com"
                   className="w-full bg-transparent px-2.5 py-3 text-xs text-[color:var(--brand-charcoal)] outline-none"
                 />
               </div>

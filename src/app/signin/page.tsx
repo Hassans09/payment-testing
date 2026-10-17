@@ -36,8 +36,8 @@ export default function SignInPage() {
   };
 
   const fillDemoCredentials = () => {
-    setEmail("maya@rebelfashion.ng");
-    setPassword("rebelAtelier2026");
+    setEmail("customer@example.com");
+    setPassword("samplePassword2026");
   };
 
   return (
@@ -51,7 +51,7 @@ export default function SignInPage() {
             Sign In
           </h1>
           <p className="mt-1 text-xs text-[color:var(--brand-charcoal)]/70">
-            Access your orders, tracked deliveries, and saved boutique wishlist.
+            Access your orders, saved products, and profile details.
           </p>
         </div>
 
@@ -94,7 +94,7 @@ export default function SignInPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="maya@example.ng"
+                placeholder="customer@example.com"
                 className="w-full bg-transparent px-2.5 py-3 text-xs text-[color:var(--brand-charcoal)] outline-none"
               />
             </div>
@@ -149,12 +149,12 @@ export default function SignInPage() {
             onClick={fillDemoCredentials}
             className="text-[11px] font-semibold text-[color:var(--brand-deep)] hover:underline"
           >
-            ⚡ Click to Auto-Fill VIP Demo Credentials (Maya Adeleke)
+            Use sample credentials
           </button>
         </div>
 
         <div className="text-center text-xs text-[color:var(--brand-charcoal)]/70 pt-2 border-t border-[color:var(--brand-border)]/60">
-          New to Rebel Fashion?{" "}
+          New here?{" "}
           <Link href="/signup" className="font-bold text-[color:var(--brand-deep)] hover:underline">
             Create an Account
           </Link>

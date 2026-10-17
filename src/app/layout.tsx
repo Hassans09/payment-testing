@@ -9,8 +9,8 @@ import RouteTransitions from "@/components/route-transitions";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Rebel Fashion | Premium Nigerian Urban Streetwear & Elevated Essentials",
-  description: "Curated Nigerian marketplace combining urban streetwear with elevated everyday luxury essentials. Free express delivery in Lagos & Abuja.",
+  title: "Curated Storefront | Fashion & Gifting",
+  description: "A polished storefront experience for curated fashion and gifting collections.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

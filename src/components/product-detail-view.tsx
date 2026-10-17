@@ -109,7 +109,7 @@ export function ProductDetailView({ product }: { product: Product }) {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--brand-primary)]">
-                Rebel Atelier Edition
+                Curated Selection
               </span>
               <button
                 type="button"
@@ -138,9 +138,7 @@ export function ProductDetailView({ product }: { product: Product }) {
                   {formatPrice(product.compareAtPrice)}
                 </span>
               )}
-              <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-800">
-                In Stock (Nigeria)
-              </span>
+              <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-800">In Stock</span>
             </div>
 
             <p className="text-sm leading-relaxed text-[color:var(--brand-charcoal)]/80 sm:text-base">
@@ -182,9 +180,7 @@ export function ProductDetailView({ product }: { product: Product }) {
             <div className="space-y-2.5">
               <div className="flex items-center justify-between text-xs uppercase tracking-wider font-semibold text-[color:var(--brand-deep)]">
                 <span>Select Size:</span>
-                <span className="text-[color:var(--brand-primary)] font-medium cursor-pointer hover:underline">
-                  Nigerian Fit Guide
-                </span>
+                <span className="text-[color:var(--brand-primary)] font-medium cursor-pointer hover:underline">Size Guide</span>
               </div>
               <div className="flex flex-wrap gap-2">
                 {product.sizes.map((size) => {
@@ -255,18 +251,17 @@ export function ProductDetailView({ product }: { product: Product }) {
             {error && <p className="text-xs font-semibold text-red-600">{error}</p>}
           </div>
 
-          {/* Nigerian Delivery Highlights */}
           <div className="rounded-2xl border border-[color:var(--brand-border)] bg-[color:var(--brand-cream)] p-4 space-y-2.5 text-xs text-[color:var(--brand-charcoal)]/85">
             <div className="flex items-center gap-2 font-semibold text-[color:var(--brand-deep)]">
               <Truck className="h-4 w-4 text-[color:var(--brand-primary)]" />
-              <span>Nigerian Nationwide Dispatch</span>
+              <span>Order Fulfillment</span>
             </div>
             <p className="leading-relaxed pl-6">
-              Same-day dispatch available in Lagos & Abuja. 2-4 working days across all 36 Nigerian states via GIG Logistics. Orders over ₦100,000 ship completely <strong>Free</strong>.
+              Estimated processing and shipping methods are finalized during checkout based on your delivery destination.
             </p>
             <div className="flex items-center gap-2 pl-6 pt-1 text-[11px] text-[color:var(--brand-charcoal)]/70">
               <ShieldCheck className="h-3.5 w-3.5 text-[color:var(--brand-primary)]" />
-              <span>100% Guaranteed Authentic Garment • 7-Day Exchange Policy</span>
+              <span>Secure checkout and order confirmation included</span>
             </div>
           </div>
 
@@ -285,7 +280,7 @@ export function ProductDetailView({ product }: { product: Product }) {
               <p className="mt-1 text-[color:var(--brand-charcoal)]/75">{product.care}</p>
             </div>
             <div className="rounded-2xl border border-[color:var(--brand-border)] bg-[color:var(--brand-white)] p-3.5">
-              <span className="font-semibold uppercase tracking-wider text-[color:var(--brand-deep)]">Dispatch</span>
+              <span className="font-semibold uppercase tracking-wider text-[color:var(--brand-deep)]">Fulfillment</span>
               <p className="mt-1 text-[color:var(--brand-charcoal)]/75">{product.shipping}</p>
             </div>
           </div>

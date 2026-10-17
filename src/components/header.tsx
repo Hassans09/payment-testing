@@ -9,6 +9,7 @@ import { useStore } from "@/components/store-provider";
 import AnimatedLogo from "@/components/animated-logo";
 
 const navItems = [
+  { href: "/", label: "Home" },
   { href: "/shop", label: "Shop All" },
   { href: "/shop?category=graphic-tees", label: "Graphic Tees" },
   { href: "/shop?category=hoodies", label: "Streetwear" },
@@ -52,7 +53,7 @@ export function Header() {
               {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
 
-            <Link href="/" className="flex items-center gap-2 shrink-0" aria-label="Rebel Fashion home">
+            <Link href="/" className="flex items-center gap-2 shrink-0" aria-label="Store home">
               <span className="flex items-center">
                 <AnimatedLogo className="min-w-[140px]" />
               </span>
@@ -91,7 +92,7 @@ export function Header() {
                   id="header-search"
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Search tees, denim, cargos..."
+                  placeholder="Search gifts, sets, accessories..."
                   className="w-full border-none bg-transparent text-xs text-[color:var(--brand-charcoal)] placeholder:text-[color:var(--brand-charcoal)]/45 focus:outline-none"
                 />
               </div>
@@ -151,7 +152,7 @@ export function Header() {
                   id="mobile-search"
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Search tees, jackets, sneakers..."
+                  placeholder="Search products..."
                   className="w-full border-none bg-transparent text-sm text-[color:var(--brand-charcoal)] placeholder:text-[color:var(--brand-charcoal)]/50 focus:outline-none"
                 />
               </div>

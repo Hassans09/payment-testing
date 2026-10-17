@@ -3,12 +3,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect } from "react";
-import { ArrowRight, Minus, Plus, ShoppingBag, Trash2, Truck, X } from "lucide-react";
+import { ArrowRight, Minus, Plus, ShoppingBag, Trash2, X } from "lucide-react";
 
 import { useStore } from "@/components/store-provider";
 import { formatPrice } from "@/lib/store-data";
-
-const FREE_SHIPPING_THRESHOLD = 100000;
 
 export function CartDrawer() {
   const { isCartOpen, closeCart, cart, subtotal, updateCartQuantity, removeFromCart } = useStore();
@@ -26,9 +24,6 @@ export function CartDrawer() {
   }, [isCartOpen]);
 
   if (!isCartOpen) return null;
-
-  const progressPercent = Math.min(100, Math.round((subtotal / FREE_SHIPPING_THRESHOLD) * 100));
-  const remainingForFreeShipping = Math.max(0, FREE_SHIPPING_THRESHOLD - subtotal);
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
@@ -63,27 +58,8 @@ export function CartDrawer() {
               </button>
             </div>
 
-            {/* Free Delivery Meter */}
-            <div className="mt-4 rounded-2xl bg-[color:var(--brand-cream)] p-3 border border-[color:var(--brand-border)]">
-              <div className="flex items-center gap-2 text-xs font-medium text-[color:var(--brand-deep)]">
-                <Truck className="h-4 w-4 text-[color:var(--brand-primary)]" />
-                {subtotal >= FREE_SHIPPING_THRESHOLD ? (
-                  <span>
-                    🎉 <strong className="font-semibold">Free Express Delivery</strong> unlocked for Lagos & Abuja!
-                  </span>
-                ) : (
-                  <span>
-                    Add <strong className="font-semibold">{formatPrice(remainingForFreeShipping)}</strong> more for{" "}
-                    <strong className="font-semibold">Free Express Delivery</strong>
-                  </span>
-                )}
-              </div>
-              <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-[color:var(--brand-border)]/60">
-                <div
-                  className="h-full rounded-full bg-[color:var(--brand-primary)] transition-all duration-500"
-                  style={{ width: `${progressPercent}%` }}
-                />
-              </div>
+            <div className="mt-4 rounded-2xl border border-[color:var(--brand-border)] bg-[color:var(--brand-cream)] p-3 text-xs text-[color:var(--brand-charcoal)]/75">
+              Shipping methods and totals are calculated during checkout.
             </div>
           </div>
 
@@ -189,7 +165,7 @@ export function CartDrawer() {
                 <span>{formatPrice(subtotal)}</span>
               </div>
               <p className="text-[11px] text-[color:var(--brand-charcoal)]/65 leading-tight">
-                Delivery and discounts computed at checkout. Fast dispatch across Nigeria.
+                Shipping and discounts are calculated at checkout.
               </p>
 
               <div className="pt-2 space-y-2">

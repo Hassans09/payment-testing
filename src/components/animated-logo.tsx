@@ -32,18 +32,15 @@ export default function AnimatedLogo({ className = "" }: { className?: string })
     getReducedMotionServerSnapshot
   );
 
-  // The design: "REBEL" in a modern, confident sans with tight tracking, and
-  // "Fashion" in an elegant serif italic to create a premium contrast—both
-  // rendered as SVG text so we can control proportions and spacing precisely.
   return (
-    <div className={`rebel-wordmark ${className}`} aria-hidden={false}>
-      <span className="sr-only">Rebel Fashion</span>
+    <div className={`store-wordmark ${className}`} aria-hidden={false}>
+      <span className="sr-only">Storefront</span>
 
       <svg
         viewBox="0 0 420 64"
         className="h-8 sm:h-10 md:h-12 w-auto"
         role="img"
-        aria-label="Rebel Fashion"
+        aria-label="Storefront"
         xmlns="http://www.w3.org/2000/svg"
       >
         <defs>
@@ -53,19 +50,14 @@ export default function AnimatedLogo({ className = "" }: { className?: string })
           </linearGradient>
           <style>
             {`
-              .rm-rebel { font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; font-weight:700; font-size:36px; letter-spacing: 0.08em; }
-              .rm-fashion { font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-weight:500; font-size:22px; letter-spacing: 0.06em; }
+              .rm-store { font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; font-weight:700; font-size:34px; letter-spacing: 0.09em; }
+              .rm-front { font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-weight:500; font-size:22px; letter-spacing: 0.06em; }
             `}
           </style>
         </defs>
 
-        {/* REBEL (uppercase, confident) */}
-        <text x="0" y="42" className="rm-rebel" fill="url(#brand-grad)">REBEL</text>
-
-        {/* Fashion (serif italic, offset to feel like a wordmark) */}
-        <text x="192" y="54" className="rm-fashion" fill="var(--brand-chocolate)">Fashion</text>
-
-        {/* subtle underline flourish (soft caramel stroke) */}
+        <text x="0" y="42" className="rm-store" fill="url(#brand-grad)">STORE</text>
+        <text x="198" y="54" className="rm-front" fill="var(--brand-chocolate)">Front</text>
         <path
           d="M6 56 C60 70 140 66 190 52 C240 38 320 46 414 56"
           fill="none"
@@ -76,13 +68,11 @@ export default function AnimatedLogo({ className = "" }: { className?: string })
           style={{ opacity: prefersReduced ? 1 : 0.95 }}
         />
       </svg>
-
       <style>{`
-        .rebel-wordmark { color: var(--brand-deep); display: inline-flex; align-items: center; }
-        /* Ensure SVG text inherits color where used */
-        .rebel-wordmark svg { display: block; }
+        .store-wordmark { color: var(--brand-deep); display: inline-flex; align-items: center; }
+        .store-wordmark svg { display: block; }
         @media (prefers-reduced-motion: reduce) {
-          .rebel-wordmark .lightning, .rebel-wordmark .anim { animation: none !important; }
+          .store-wordmark .lightning, .store-wordmark .anim { animation: none !important; }
         }
       `}</style>
     </div>

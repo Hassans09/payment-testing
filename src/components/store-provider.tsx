@@ -48,8 +48,8 @@ type StoreContextValue = {
   clearCart: () => void;
 };
 
-const cartStorageKey = "rebel-fashion-cart-v1";
-const wishlistStorageKey = "rebel-fashion-wishlist-v1";
+const cartStorageKey = "storefront-cart-v1";
+const wishlistStorageKey = "storefront-wishlist-v1";
 
 const StoreContext = createContext<StoreContextValue | undefined>(undefined);
 

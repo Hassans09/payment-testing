@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Lock, MapPin, Phone, ShieldCheck } from "lucide-react";
+import { Lock, ShieldCheck } from "lucide-react";
 import AnimatedLogo from "@/components/animated-logo";
 
 const footerShopLinks = [
@@ -20,34 +20,15 @@ export function Footer() {
         <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-[1.5fr_1.1fr_1fr_1fr]">
           {/* Brand Intro & Locations */}
           <div className="space-y-4">
-            <Link href="/" className="inline-block" aria-label="Rebel Fashion Home">
+            <Link href="/" className="inline-block" aria-label="Store home">
               <AnimatedLogo className="min-w-[150px]" />
             </Link>
 
             <p className="max-w-sm text-xs leading-relaxed text-[color:var(--brand-charcoal)]/75">
-              Modern Nigerian fashion marketplace combining urban streetwear with elevated everyday essentials. Handcrafted heavyweight fabrics, architectural cuts, and bespoke boutique shopping.
+              A clean, modern storefront built for curated fashion and gifting selections. Product, category, and account flows are ready to connect to backend APIs.
             </p>
 
-            <div className="space-y-2 text-xs text-[color:var(--brand-charcoal)]/80 pt-2">
-              <div className="flex items-start gap-2">
-                <MapPin className="h-4 w-4 text-[color:var(--brand-primary)] shrink-0 mt-0.5" />
-                <span>
-                  <strong>Flagship Boutique:</strong> Victoria Island, Lagos, Nigeria
-                </span>
-              </div>
-              <div className="flex items-start gap-2">
-                <MapPin className="h-4 w-4 text-[color:var(--brand-primary)] shrink-0 mt-0.5" />
-                <span>
-                  <strong>Atelier Studio:</strong> Maitama, Abuja (FCT), Nigeria
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Phone className="h-4 w-4 text-[color:var(--brand-primary)] shrink-0" />
-                <span>
-                  <strong>WhatsApp Care:</strong> +234 802 918 3491
-                </span>
-              </div>
-            </div>
+            <p className="text-xs text-[color:var(--brand-charcoal)]/70">Need assistance? Contact support through your connected backend channels.</p>
           </div>
 
           {/* Curated Categories */}
@@ -74,7 +55,7 @@ export function Footer() {
             <ul className="space-y-2.5 text-xs text-[color:var(--brand-charcoal)]/75">
               <li>
                 <Link href="/account" className="hover:text-[color:var(--brand-primary)] transition">
-                  Track GIG Logistics Order
+                Track Orders
                 </Link>
               </li>
               <li>
@@ -94,7 +75,7 @@ export function Footer() {
               </li>
               <li>
                 <Link href="/signin" className="hover:text-[color:var(--brand-primary)] transition">
-                  VIP Member Login
+                Sign In
                 </Link>
               </li>
             </ul>
@@ -108,10 +89,10 @@ export function Footer() {
             <div className="rounded-2xl border border-[color:var(--brand-border)] bg-[color:var(--brand-cream)] p-4 space-y-2 text-xs">
               <div className="flex items-center gap-1.5 font-bold text-[color:var(--brand-deep)]">
                 <ShieldCheck className="h-4 w-4 text-[color:var(--brand-primary)]" />
-                <span>Paystack Gateway Verified</span>
+                <span>Secure Payment Gateway</span>
               </div>
               <p className="text-[11px] text-[color:var(--brand-charcoal)]/70 leading-relaxed">
-                256-Bit SSL protection for all Nigerian card & bank transfer payments.
+                256-bit SSL protection for card and transfer payments.
               </p>
               <div className="flex flex-wrap gap-1.5 pt-1 text-[10px] font-semibold text-[color:var(--brand-deep)]">
                 <span className="rounded bg-white px-2 py-0.5 border border-[color:var(--brand-border)]">Mastercard</span>
@@ -125,10 +106,10 @@ export function Footer() {
 
         {/* Bottom Legal / Copyright */}
         <div className="mt-14 flex flex-col gap-3 border-t border-[color:var(--brand-border)] pt-6 text-xs text-[color:var(--brand-charcoal)]/60 sm:flex-row sm:items-center sm:justify-between">
-          <p>© 2026 Rebel Fashion Nigeria (REBEL FASHION ENTERPRISE). All rights reserved.</p>
+          <p>© 2026 Storefront. All rights reserved.</p>
           <p className="flex items-center gap-1">
             <Lock className="h-3 w-3" />
-            <span>Encrypted Nigerian Marketplace Platform</span>
+            <span>Encrypted ecommerce platform</span>
           </p>
         </div>
       </div>

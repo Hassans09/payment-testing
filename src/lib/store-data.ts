@@ -27,7 +27,7 @@ export type Product = {
 };
 
 export const announcement =
-  "🇳🇬 Free express delivery across Lagos & Abuja on orders over ₦100,000 • Paystack & Instant Transfer supported";
+  "Curated fashion and gifting selections • Secure checkout • New arrivals updated weekly";
 
 export const categories: Category[] = [
   {
@@ -142,12 +142,12 @@ export const products: Product[] = [
     material: "100% Heavy Combed Cotton (280 GSM)",
     fit: "Oversized, relaxed boxy cut with dropped shoulders",
     care: "Machine wash cold inside-out. Line dry recommended.",
-    shipping: "Same-day dispatch in Lagos & Abuja. 2-3 days nationwide.",
+    shipping: "Order processing details shown at checkout.",
   },
   {
-    id: "rebel-signature-plain-tee",
-    slug: "rebel-signature-plain-tee",
-    name: "Rebel Signature Plain Heavyweight Tee",
+    id: "signature-plain-heavyweight-tee",
+    slug: "signature-plain-heavyweight-tee",
+    name: "Signature Plain Heavyweight Tee",
     category: "plain-tees",
     price: 22000,
     compareAtPrice: 26000,
@@ -165,7 +165,7 @@ export const products: Product[] = [
     material: "100% Long-Staple Ring-Spun Cotton (260 GSM)",
     fit: "Tailored regular fit with clean drape",
     care: "Cool wash at 30°C. Reshape while damp.",
-    shipping: "In stock. Dispatch within 24 hours.",
+    shipping: "Order processing details shown at checkout.",
   },
   {
     id: "nocturne-heavy-fleece-hoodie",
@@ -188,7 +188,7 @@ export const products: Product[] = [
     material: "450 GSM Heavy French Terry (85% Organic Cotton, 15% Recycled Poly)",
     fit: "Boxy streetwear fit with ribbed hem and cuffs",
     care: "Gentle wash cold. Do not tumble dry.",
-    shipping: "Dispatches from Lagos Fulfilment Hub.",
+    shipping: "Order processing details shown at checkout.",
   },
   {
     id: "atelier-unstructured-blazer",
@@ -211,7 +211,7 @@ export const products: Product[] = [
     material: "55% Tropical Wool, 45% Natural Linen",
     fit: "Relaxed contemporary tailored fit with soft natural shoulders",
     care: "Dry clean only. Steam refresh between wears.",
-    shipping: "Complimentary Express Delivery in garment protective bag.",
+    shipping: "Order processing details shown at checkout.",
   },
   {
     id: "nomad-multi-pocket-cargos",
@@ -234,7 +234,7 @@ export const products: Product[] = [
     material: "100% Heavyweight Ripstop Cotton",
     fit: "Relaxed straight fit with adjustable bungee ankle toggles",
     care: "Cold machine wash with similar colours. Warm iron.",
-    shipping: "Standard dispatch nationwide via GIG Logistics.",
+    shipping: "Order processing details shown at checkout.",
   },
   {
     id: "heritage-washed-denim",
@@ -257,7 +257,7 @@ export const products: Product[] = [
     material: "100% Ring-Spun Cotton Denim (13.5 oz)",
     fit: "Relaxed mid-rise with straight leg opening",
     care: "Wash inside-out in cold water. Air dry.",
-    shipping: "Dispatches within 24 hours.",
+    shipping: "Order processing details shown at checkout.",
   },
   {
     id: "solstice-linen-coord-set",
@@ -280,7 +280,7 @@ export const products: Product[] = [
     material: "65% Washed European Linen, 35% Organic Cotton",
     fit: "Breezy relaxed vacation fit with elasticated drawstring waist",
     care: "Machine wash cold on delicate cycle. Hang to dry.",
-    shipping: "Includes matching two-piece set in presentation box.",
+    shipping: "Order processing details shown at checkout.",
   },
   {
     id: "aura-textured-cotton-shirt",
@@ -303,7 +303,7 @@ export const products: Product[] = [
     material: "100% Organic Double-Gauze Cotton",
     fit: "Fluid relaxed silhouette with dropped shoulder seams",
     care: "Hand or machine wash cold. Light iron or steam.",
-    shipping: "Lagos & Abuja 24h delivery.",
+    shipping: "Order processing details shown at checkout.",
   },
   {
     id: "sculpt-asymmetrical-draped-top",
@@ -326,7 +326,7 @@ export const products: Product[] = [
     material: "92% Micro-Ribbed Modal, 8% Elastane",
     fit: "Form-fitting contour silhouette with high stretch memory",
     care: "Hand wash cold. Flat dry to preserve garment shape.",
-    shipping: "Same-day dispatch in Lagos.",
+    shipping: "Order processing details shown at checkout.",
   },
   {
     id: "seraphina-silk-column-dress",
@@ -349,7 +349,7 @@ export const products: Product[] = [
     material: "100% Grade 6A Mulberry Silk Satin",
     fit: "Bias-cut fluid drape conforming to curves",
     care: "Specialist dry clean or delicate cool silk wash.",
-    shipping: "Delivered in signature protective keepsake box.",
+    shipping: "Order processing details shown at checkout.",
   },
   {
     id: "architecte-low-top-sneakers",
@@ -372,7 +372,7 @@ export const products: Product[] = [
     material: "Full-Grain Italian Calf Leather, Suede Overlays, Rubber Cupsole",
     fit: "True to EU size. If between sizes, size down.",
     care: "Wipe with damp cloth. Apply neutral leather balm regularly.",
-    shipping: "Includes spare cotton laces and dust bag.",
+    shipping: "Order processing details shown at checkout.",
   },
   {
     id: "parisian-leather-crossbody",
@@ -395,7 +395,7 @@ export const products: Product[] = [
     material: "Vegetable-Tanned Cowhide Leather, Suede Lining",
     fit: "Dimensions: 22cm x 16cm x 7cm",
     care: "Condition with natural leather balm periodically.",
-    shipping: "Includes cotton dust bag.",
+    shipping: "Order processing details shown at checkout.",
   },
 ];
 

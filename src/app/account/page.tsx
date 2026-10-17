@@ -7,259 +7,200 @@ import { Heart, MapPin } from "lucide-react";
 import { useStore } from "@/components/store-provider";
 import { formatPrice, products } from "@/lib/store-data";
 
-const recentOrders = [
+type OrderStatusStep = { label: string; done?: boolean; current?: boolean };
+type AccountOrder = {
+  id: string;
+  date: string;
+  status: string;
+  destination: string;
+  items: string;
+  total: number;
+  steps: OrderStatusStep[];
+};
+
+type AccountAddress = {
+  type: string;
+  name: string;
+  phone: string;
+  address: string;
+  cityState: string;
+};
+
+const recentOrders: AccountOrder[] = [
   {
-    id: "RF-LAG-10842",
+    id: "ORD-20481",
     date: "14 Oct 2026",
-    status: "In Transit",
-    courier: "GIG Logistics (GIG-9482104)",
-    destination: "Lekki Phase 1, Lagos",
-    items: "Archives Heavyweight Graphic T-Shirt + 1 item",
+    status: "Preparing",
+    destination: "Central City",
+    items: "Signature Plain Heavyweight Tee + 1 item",
     total: 92500,
     steps: [
       { label: "Confirmed", done: true },
-      { label: "Packaging", done: true },
-      { label: "In Transit", current: true },
+      { label: "Preparing", current: true },
+      { label: "Shipped", done: false },
       { label: "Delivered", done: false },
     ],
   },
   {
-    id: "RF-ABJ-09821",
+    id: "ORD-20112",
     date: "28 Sep 2026",
     status: "Delivered",
-    courier: "GIG Express Dispatch",
-    destination: "Maitama, Abuja (FCT)",
+    destination: "North District",
     items: "Atelier Relaxed Unstructured Blazer",
     total: 95000,
     steps: [
       { label: "Confirmed", done: true },
-      { label: "Packaging", done: true },
-      { label: "In Transit", done: true },
+      { label: "Preparing", done: true },
+      { label: "Shipped", done: true },
       { label: "Delivered", done: true },
     ],
   },
 ];
 
-const savedAddresses = [
+const savedAddresses: AccountAddress[] = [
   {
-    type: "Default Shipping",
-    name: "Maya Adeleke",
-    phone: "+234 802 918 3491",
-    address: "14B Admiralty Way, Lekki Phase 1",
-    cityState: "Lekki, Lagos State",
+    type: "Default Address",
+    name: "Alex Customer",
+    phone: "+1 555 0102",
+    address: "120 Market Street",
+    cityState: "Central City",
   },
   {
-    type: "Secondary / Office",
-    name: "Maya Adeleke",
-    phone: "+234 802 918 3491",
-    address: "Plot 402, Gana Street, Maitama",
-    cityState: "Abuja (FCT)",
+    type: "Work Address",
+    name: "Alex Customer",
+    phone: "+1 555 0102",
+    address: "49 Commerce Avenue",
+    cityState: "North District",
   },
 ];
 
 export default function AccountPage() {
   const { wishlist, addToCart } = useStore();
-
   const savedProducts = products.filter((p) => wishlist.includes(p.id));
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-      {/* Account Hero Banner */}
-      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between border-b border-[color:var(--brand-border)] pb-6">
+      <div className="mb-8 flex flex-col gap-4 border-b border-[color:var(--brand-border)] pb-6 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <span className="text-xs font-bold uppercase tracking-[0.2em] text-[color:var(--brand-primary)]">
-            Rebel Atelier Member
-          </span>
-          <h1 className="mt-1 text-3xl sm:text-4xl font-extrabold tracking-tight text-[color:var(--brand-deep)]">
-            Welcome back, Maya
-          </h1>
-          <p className="mt-1 text-xs text-[color:var(--brand-charcoal)]/65">
-            Lagos VIP Tier • Member since 2024 • Verified Phone (+234 802 918 3491)
-          </p>
+          <span className="text-xs font-bold uppercase tracking-[0.2em] text-[color:var(--brand-primary)]">Account Dashboard</span>
+          <h1 className="mt-1 text-3xl font-extrabold tracking-tight text-[color:var(--brand-deep)] sm:text-4xl">Welcome back</h1>
+          <p className="mt-1 text-xs text-[color:var(--brand-charcoal)]/65">Manage orders, addresses, and saved products.</p>
         </div>
         <Link
           href="/signin"
-          className="inline-flex items-center justify-center rounded-full border border-[color:var(--brand-border)] bg-white px-6 py-2.5 text-xs font-semibold uppercase tracking-wider text-[color:var(--brand-charcoal)] hover:bg-[color:var(--brand-soft)]/50 transition shadow-2xs"
+          className="inline-flex items-center justify-center rounded-full border border-[color:var(--brand-border)] bg-white px-6 py-2.5 text-xs font-semibold uppercase tracking-wider text-[color:var(--brand-charcoal)] shadow-2xs transition hover:bg-[color:var(--brand-soft)]/50"
         >
           Sign Out
         </Link>
       </div>
 
-      {/* Metric Counters */}
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="rounded-[28px] border border-[color:var(--brand-border)] bg-[color:var(--brand-white)] p-6 shadow-[0_12px_30px_rgba(91,64,50,0.03)]">
-          <p className="text-xs font-semibold uppercase tracking-wider text-[color:var(--brand-charcoal)]/60">
-            Saved in Wishlist
-          </p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-[color:var(--brand-charcoal)]/60">Saved in Wishlist</p>
           <p className="mt-2 text-3xl font-extrabold text-[color:var(--brand-deep)]">{wishlist.length}</p>
-          <span className="mt-1 inline-block text-[11px] text-[color:var(--brand-primary)] font-medium">
-            Ready to move to bag
-          </span>
         </div>
 
         <div className="rounded-[28px] border border-[color:var(--brand-border)] bg-[color:var(--brand-white)] p-6 shadow-[0_12px_30px_rgba(91,64,50,0.03)]">
-          <p className="text-xs font-semibold uppercase tracking-wider text-[color:var(--brand-charcoal)]/60">
-            Total Orders Placed
-          </p>
-          <p className="mt-2 text-3xl font-extrabold text-[color:var(--brand-deep)]">02</p>
-          <span className="mt-1 inline-block text-[11px] text-emerald-700 font-medium">
-            1 in transit via GIG Logistics
-          </span>
+          <p className="text-xs font-semibold uppercase tracking-wider text-[color:var(--brand-charcoal)]/60">Orders</p>
+          <p className="mt-2 text-3xl font-extrabold text-[color:var(--brand-deep)]">{recentOrders.length.toString().padStart(2, "0")}</p>
         </div>
 
         <div className="rounded-[28px] border border-[color:var(--brand-border)] bg-[color:var(--brand-white)] p-6 shadow-[0_12px_30px_rgba(91,64,50,0.03)]">
-          <p className="text-xs font-semibold uppercase tracking-wider text-[color:var(--brand-charcoal)]/60">
-            Saved Delivery Addresses
-          </p>
-          <p className="mt-2 text-3xl font-extrabold text-[color:var(--brand-deep)]">2</p>
-          <span className="mt-1 inline-block text-[11px] text-[color:var(--brand-charcoal)]/70">
-            Lekki & Maitama verified
-          </span>
+          <p className="text-xs font-semibold uppercase tracking-wider text-[color:var(--brand-charcoal)]/60">Saved Addresses</p>
+          <p className="mt-2 text-3xl font-extrabold text-[color:var(--brand-deep)]">{savedAddresses.length}</p>
         </div>
       </div>
 
-      {/* Main Grid: Orders & Addresses */}
       <div className="mt-10 grid gap-8 lg:grid-cols-[1.3fr_0.7fr]">
-        {/* Real-time Order Tracking Pipeline */}
         <div className="space-y-6">
-          <div className="rounded-[30px] border border-[color:var(--brand-border)] bg-[color:var(--brand-white)] p-6 sm:p-8 shadow-[0_16px_35px_rgba(91,64,50,0.03)] space-y-6">
-            <div className="flex items-center justify-between border-b border-[color:var(--brand-border)]/60 pb-4">
-              <div>
-                <h2 className="text-xl font-bold tracking-tight text-[color:var(--brand-deep)]">
-                  Active Orders & Real-time Tracking
-                </h2>
-                <p className="text-xs text-[color:var(--brand-charcoal)]/65">
-                  Track Nigerian dispatch updates directly through GIG Logistics
-                </p>
-              </div>
-              <Link
-                href="/shop"
-                className="text-xs font-semibold uppercase tracking-wider text-[color:var(--brand-primary)] hover:underline"
-              >
-                Shop New Drop
-              </Link>
+          <div className="space-y-6 rounded-[30px] border border-[color:var(--brand-border)] bg-[color:var(--brand-white)] p-6 shadow-[0_16px_35px_rgba(91,64,50,0.03)] sm:p-8">
+            <div className="border-b border-[color:var(--brand-border)]/60 pb-4">
+              <h2 className="text-xl font-bold tracking-tight text-[color:var(--brand-deep)]">Recent Orders</h2>
+              <p className="text-xs text-[color:var(--brand-charcoal)]/65">Order statuses are placeholder frontend data ready for backend responses.</p>
             </div>
 
             <div className="space-y-6">
               {recentOrders.map((order) => (
-                <div
-                  key={order.id}
-                  className="rounded-2xl border border-[color:var(--brand-border)] bg-[color:var(--brand-cream)]/70 p-5 space-y-4"
-                >
+                <div key={order.id} className="space-y-4 rounded-2xl border border-[color:var(--brand-border)] bg-[color:var(--brand-cream)]/70 p-5">
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-extrabold text-sm text-[color:var(--brand-deep)]">{order.id}</span>
-                        <span
-                          className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
-                            order.status === "In Transit"
-                              ? "bg-amber-100 text-amber-800 animate-pulse"
-                              : "bg-emerald-100 text-emerald-800"
-                          }`}
-                        >
+                        <span className="text-sm font-extrabold text-[color:var(--brand-deep)]">{order.id}</span>
+                        <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-800">
                           {order.status}
                         </span>
                       </div>
-                      <p className="mt-1 text-xs text-[color:var(--brand-charcoal)]/70">
-                        {order.items} • Ordered {order.date}
-                      </p>
+                      <p className="mt-1 text-xs text-[color:var(--brand-charcoal)]/70">{order.items} • Ordered {order.date}</p>
                     </div>
 
                     <div className="text-left sm:text-right">
-                      <span className="font-extrabold text-base text-[color:var(--brand-deep)]">
-                        {formatPrice(order.total)}
-                      </span>
-                      <p className="text-[11px] text-[color:var(--brand-charcoal)]/60">{order.courier}</p>
+                      <span className="text-base font-extrabold text-[color:var(--brand-deep)]">{formatPrice(order.total)}</span>
                     </div>
                   </div>
 
-                  {/* 4-Step Pipeline Visualizer */}
-                  <div className="grid grid-cols-4 gap-2 pt-2 border-t border-[color:var(--brand-border)]/60 text-center">
-                    {order.steps.map((st) => (
-                      <div key={st.label} className="space-y-1">
+                  <div className="grid grid-cols-4 gap-2 border-t border-[color:var(--brand-border)]/60 pt-2 text-center">
+                    {order.steps.map((step) => (
+                      <div key={step.label} className="space-y-1">
                         <div
-                          className={`h-1.5 rounded-full transition-all ${
-                            st.done
-                              ? "bg-emerald-600"
-                              : st.current
-                                ? "bg-[color:var(--brand-primary)]"
-                                : "bg-[color:var(--brand-border)]"
+                          className={`h-1.5 rounded-full ${
+                            step.done ? "bg-emerald-600" : step.current ? "bg-[color:var(--brand-primary)]" : "bg-[color:var(--brand-border)]"
                           }`}
                         />
                         <span
                           className={`block text-[10px] font-semibold uppercase tracking-wider ${
-                            st.done || st.current
-                              ? "text-[color:var(--brand-deep)] font-bold"
-                              : "text-[color:var(--brand-charcoal)]/40"
+                            step.done || step.current ? "text-[color:var(--brand-deep)]" : "text-[color:var(--brand-charcoal)]/40"
                           }`}
                         >
-                          {st.label}
+                          {step.label}
                         </span>
                       </div>
                     ))}
                   </div>
 
-                  <div className="flex items-center justify-between text-xs pt-1 text-[color:var(--brand-charcoal)]/75">
+                  <div className="flex items-center justify-between pt-1 text-xs text-[color:var(--brand-charcoal)]/75">
                     <span className="flex items-center gap-1.5">
                       <MapPin className="h-3.5 w-3.5 text-[color:var(--brand-primary)]" />
                       <span>Destination: {order.destination}</span>
                     </span>
-                    <span className="font-medium text-[color:var(--brand-deep)] underline cursor-pointer">
-                      View GIG Waybill
-                    </span>
+                    <span className="font-medium text-[color:var(--brand-deep)] underline">View details</span>
                   </div>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Saved Wishlist Pieces with 1-Click Move to Bag */}
-          <div className="rounded-[30px] border border-[color:var(--brand-border)] bg-[color:var(--brand-white)] p-6 sm:p-8 shadow-[0_16px_35px_rgba(91,64,50,0.03)] space-y-5">
+          <div className="space-y-5 rounded-[30px] border border-[color:var(--brand-border)] bg-[color:var(--brand-white)] p-6 shadow-[0_16px_35px_rgba(91,64,50,0.03)] sm:p-8">
             <div className="flex items-center justify-between border-b border-[color:var(--brand-border)]/60 pb-4">
               <div className="flex items-center gap-2">
-                <Heart className="h-5 w-5 text-red-600 fill-red-600" />
-                <h2 className="text-xl font-bold tracking-tight text-[color:var(--brand-deep)]">
-                  Saved Pieces ({wishlist.length})
-                </h2>
+                <Heart className="h-5 w-5 fill-red-600 text-red-600" />
+                <h2 className="text-xl font-bold tracking-tight text-[color:var(--brand-deep)]">Saved Products ({wishlist.length})</h2>
               </div>
-              <Link
-                href="/wishlist"
-                className="text-xs font-semibold uppercase tracking-wider text-[color:var(--brand-deep)] hover:underline"
-              >
-                View Full Wishlist
+              <Link href="/wishlist" className="text-xs font-semibold uppercase tracking-wider text-[color:var(--brand-deep)] hover:underline">
+                View Wishlist
               </Link>
             </div>
 
             {savedProducts.length === 0 ? (
-              <p className="text-xs text-[color:var(--brand-charcoal)]/65 py-4">
-                No saved items right now. Browse our store and tap the heart icon on any style!
-              </p>
+              <p className="py-4 text-xs text-[color:var(--brand-charcoal)]/65">No saved products yet. Tap the heart icon on any product to add it here.</p>
             ) : (
               <div className="grid gap-3 sm:grid-cols-2">
                 {savedProducts.slice(0, 4).map((item) => (
-                  <div
-                    key={item.id}
-                    className="flex items-center justify-between gap-3 rounded-2xl border border-[color:var(--brand-border)] bg-[color:var(--brand-cream)] p-3"
-                  >
+                  <div key={item.id} className="flex items-center justify-between gap-3 rounded-2xl border border-[color:var(--brand-border)] bg-[color:var(--brand-cream)] p-3">
                     <div className="flex items-center gap-3">
                       <div className="relative h-14 w-12 shrink-0 overflow-hidden rounded-xl bg-[color:var(--brand-ivory)]">
                         <Image src={item.images[0]} alt={item.name} fill sizes="50px" className="object-cover" />
                       </div>
                       <div>
-                        <p className="text-xs font-bold text-[color:var(--brand-deep)] line-clamp-1">{item.name}</p>
-                        <p className="text-xs font-bold text-[color:var(--brand-primary)]">
-                          {formatPrice(item.price)}
-                        </p>
+                        <p className="line-clamp-1 text-xs font-bold text-[color:var(--brand-deep)]">{item.name}</p>
+                        <p className="text-xs font-bold text-[color:var(--brand-primary)]">{formatPrice(item.price)}</p>
                       </div>
                     </div>
                     <button
                       type="button"
-                      onClick={() =>
-                        addToCart({ product: item, color: item.colors[0], size: item.sizes[0], quantity: 1 }, true)
-                      }
-                      className="shrink-0 rounded-full bg-[color:var(--brand-deep)] px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-white hover:bg-[color:var(--brand-chocolate)] transition"
+                      onClick={() => addToCart({ product: item, color: item.colors[0], size: item.sizes[0], quantity: 1 }, true)}
+                      className="shrink-0 rounded-full bg-[color:var(--brand-deep)] px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-white transition hover:bg-[color:var(--brand-chocolate)]"
                     >
-                      Move to Bag
+                      Add to Bag
                     </button>
                   </div>
                 ))}
@@ -268,53 +209,42 @@ export default function AccountPage() {
           </div>
         </div>
 
-        {/* Profile & Nigerian Addresses */}
         <div className="space-y-6">
-          {/* Profile Card */}
-          <div className="rounded-[30px] border border-[color:var(--brand-border)] bg-[color:var(--brand-soft)]/35 p-6 shadow-[0_16px_35px_rgba(91,64,50,0.03)] space-y-4">
+          <div className="space-y-4 rounded-[30px] border border-[color:var(--brand-border)] bg-[color:var(--brand-soft)]/35 p-6 shadow-[0_16px_35px_rgba(91,64,50,0.03)]">
             <h2 className="text-xl font-bold tracking-tight text-[color:var(--brand-deep)]">Customer Profile</h2>
             <ul className="space-y-3 text-xs text-[color:var(--brand-charcoal)]/80">
               <li className="flex items-center justify-between border-b border-[color:var(--brand-border)]/50 pb-2">
                 <span className="text-[color:var(--brand-charcoal)]/60">Full Name</span>
-                <span className="font-bold text-[color:var(--brand-deep)]">Maya Adeleke</span>
+                <span className="font-bold text-[color:var(--brand-deep)]">Alex Customer</span>
               </li>
               <li className="flex items-center justify-between border-b border-[color:var(--brand-border)]/50 pb-2">
                 <span className="text-[color:var(--brand-charcoal)]/60">Email</span>
-                <span className="font-bold text-[color:var(--brand-deep)]">maya@rebelfashion.ng</span>
-              </li>
-              <li className="flex items-center justify-between border-b border-[color:var(--brand-border)]/50 pb-2">
-                <span className="text-[color:var(--brand-charcoal)]/60">Phone (WhatsApp)</span>
-                <span className="font-bold text-[color:var(--brand-deep)]">+234 802 918 3491</span>
+                <span className="font-bold text-[color:var(--brand-deep)]">customer@example.com</span>
               </li>
               <li className="flex items-center justify-between">
-                <span className="text-[color:var(--brand-charcoal)]/60">Preferred Hub</span>
-                <span className="font-bold text-[color:var(--brand-deep)]">Lekki Dispatch Centre</span>
+                <span className="text-[color:var(--brand-charcoal)]/60">Phone</span>
+                <span className="font-bold text-[color:var(--brand-deep)]">+1 555 0102</span>
               </li>
             </ul>
           </div>
 
-          {/* Saved Addresses Book */}
-          <div className="rounded-[30px] border border-[color:var(--brand-border)] bg-[color:var(--brand-white)] p-6 shadow-[0_16px_35px_rgba(91,64,50,0.03)] space-y-4">
+          <div className="space-y-4 rounded-[30px] border border-[color:var(--brand-border)] bg-[color:var(--brand-white)] p-6 shadow-[0_16px_35px_rgba(91,64,50,0.03)]">
             <div className="flex items-center justify-between border-b border-[color:var(--brand-border)]/60 pb-3">
               <h2 className="text-xl font-bold tracking-tight text-[color:var(--brand-deep)]">Address Book</h2>
-              <span className="text-xs font-semibold text-[color:var(--brand-primary)]">2 Verified</span>
+              <span className="text-xs font-semibold text-[color:var(--brand-primary)]">{savedAddresses.length} saved</span>
             </div>
 
             <div className="space-y-3">
-              {savedAddresses.map((addr) => (
-                <div key={addr.type} className="rounded-2xl border border-[color:var(--brand-border)] bg-[color:var(--brand-cream)] p-4 space-y-1.5 text-xs">
+              {savedAddresses.map((address) => (
+                <div key={address.type} className="space-y-1.5 rounded-2xl border border-[color:var(--brand-border)] bg-[color:var(--brand-cream)] p-4 text-xs">
                   <div className="flex items-center justify-between">
-                    <span className="font-bold uppercase tracking-wider text-[color:var(--brand-deep)]">
-                      {addr.type}
-                    </span>
-                    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[9px] font-bold text-emerald-800">
-                      Active
-                    </span>
+                    <span className="font-bold uppercase tracking-wider text-[color:var(--brand-deep)]">{address.type}</span>
+                    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[9px] font-bold text-emerald-800">Active</span>
                   </div>
-                  <p className="font-semibold text-sm text-[color:var(--brand-deep)]">{addr.name}</p>
-                  <p className="text-[color:var(--brand-charcoal)]/70">{addr.address}</p>
-                  <p className="text-[color:var(--brand-charcoal)]/70">{addr.cityState}</p>
-                  <p className="text-[color:var(--brand-charcoal)]/60">{addr.phone}</p>
+                  <p className="text-sm font-semibold text-[color:var(--brand-deep)]">{address.name}</p>
+                  <p className="text-[color:var(--brand-charcoal)]/70">{address.address}</p>
+                  <p className="text-[color:var(--brand-charcoal)]/70">{address.cityState}</p>
+                  <p className="text-[color:var(--brand-charcoal)]/60">{address.phone}</p>
                 </div>
               ))}
             </div>

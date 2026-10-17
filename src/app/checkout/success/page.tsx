@@ -37,7 +37,7 @@ function getSessionOrder(): SavedOrder | null {
   if (typeof window === "undefined") return null;
   if (!orderInitialized) {
     try {
-      const raw = sessionStorage.getItem("last_rebel_order");
+      const raw = sessionStorage.getItem("last_store_order");
       if (raw) {
         cachedOrder = JSON.parse(raw);
       }
@@ -60,16 +60,16 @@ function getServerOrder() {
 export default function CheckoutSuccessPage() {
   const order = useSyncExternalStore(subscribeOrder, getSessionOrder, getServerOrder);
 
-  const orderId = order?.orderId ?? "RF-NG-74291";
+  const orderId = order?.orderId ?? "ORD-74291";
   const customerName = order?.customerName ?? "Valued Customer";
-  const address = order?.address ?? "Lekki Phase 1, Lagos, Nigeria";
+  const address = order?.address ?? "120 Market Street, Central City";
   const total = order?.total ?? 85000;
   const paymentMethodLabel =
     order?.paymentMethod === "transfer"
-      ? "Direct Bank Transfer (Wema Bank)"
+      ? "Direct Bank Transfer"
       : order?.paymentMethod === "pod"
-        ? "Pay on Delivery (Lagos)"
-        : "Paystack Instant Card Payment";
+        ? "Pay on Delivery"
+        : "Instant Card Payment";
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8">
@@ -86,7 +86,7 @@ export default function CheckoutSuccessPage() {
             Thank you, {customerName}!
           </h1>
           <p className="max-w-lg mx-auto text-sm text-[color:var(--brand-charcoal)]/75 leading-relaxed">
-            Your order has been officially received. Our packaging team at the Lagos Fulfillment Hub is preparing your garment bag for dispatch.
+            Your order has been received and is now in our fulfillment queue.
           </p>
         </div>
 
@@ -96,7 +96,7 @@ export default function CheckoutSuccessPage() {
             <span>Order Pipeline</span>
             <span className="text-[color:var(--brand-primary)] flex items-center gap-1">
               <Clock className="h-3.5 w-3.5" />
-              <span>GIG Logistics Tracking Active</span>
+              <span>Tracking Active</span>
             </span>
           </div>
 
@@ -114,7 +114,7 @@ export default function CheckoutSuccessPage() {
                 ●
               </div>
               <p className="text-xs font-bold text-[color:var(--brand-deep)]">Packaging</p>
-              <p className="text-[11px] text-[color:var(--brand-charcoal)]/60">Lagos Hub Prep</p>
+              <p className="text-[11px] text-[color:var(--brand-charcoal)]/60">Warehouse Prep</p>
             </div>
 
             <div className="space-y-1.5 opacity-60">
@@ -122,7 +122,7 @@ export default function CheckoutSuccessPage() {
                 3
               </div>
               <p className="text-xs font-bold text-[color:var(--brand-deep)]">In Transit</p>
-              <p className="text-[11px] text-[color:var(--brand-charcoal)]/60">GIG Courier Pickup</p>
+              <p className="text-[11px] text-[color:var(--brand-charcoal)]/60">Carrier Pickup</p>
             </div>
 
             <div className="space-y-1.5 opacity-60">
@@ -140,11 +140,11 @@ export default function CheckoutSuccessPage() {
           <div className="rounded-2xl border border-[color:var(--brand-border)] bg-[color:var(--brand-white)] p-4 space-y-1.5">
             <span className="font-bold uppercase tracking-wider text-[color:var(--brand-deep)] flex items-center gap-1.5">
               <MapPin className="h-3.5 w-3.5 text-[color:var(--brand-primary)]" />
-              Delivery Destination
+              Delivery Address
             </span>
             <p className="font-semibold text-sm text-[color:var(--brand-deep)]">{address}</p>
             <p className="text-[color:var(--brand-charcoal)]/65">
-              Standard Courier Handshake • WhatsApp updates: {order?.phone || "+234 801 234 5678"}
+              Tracking updates: {order?.phone || "+1 555 0100"}
             </p>
           </div>
 

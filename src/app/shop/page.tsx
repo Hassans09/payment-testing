@@ -69,12 +69,11 @@ function ShopContent({ initialSearch, initialCategory }: { initialSearch: string
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-      {/* Editorial Header */}
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between border-b border-[color:var(--brand-border)] pb-6">
         <div>
           <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-[color:var(--brand-primary)]">
             <Sparkles className="h-3.5 w-3.5" />
-            <span>Curated Nigerian Streetwear & Essentials</span>
+            <span>Curated Fashion & Gifts</span>
           </div>
           <h1 className="mt-2 text-3xl sm:text-4xl font-extrabold tracking-tight text-[color:var(--brand-deep)]">
             {categoryTitle}
@@ -92,7 +91,6 @@ function ShopContent({ initialSearch, initialCategory }: { initialSearch: string
         </div>
       </div>
 
-      {/* Boutique Segmented Category Tabs (Reference: kaystores.vercel.app/gifts) */}
       <div className="mb-8">
         <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
           <button
@@ -159,8 +157,8 @@ function ShopContent({ initialSearch, initialCategory }: { initialSearch: string
                 onChange={(e) => setSortBy(e.target.value)}
                 className="w-full bg-transparent text-xs font-medium text-[color:var(--brand-charcoal)] focus:outline-none cursor-pointer"
               >
-                <option value="featured">Featured Curations</option>
-                <option value="newest">New Releases & Drops</option>
+                <option value="featured">Featured Picks</option>
+                <option value="newest">Newest Arrivals</option>
                 <option value="low-to-high">Price: Low to High</option>
                 <option value="high-to-low">Price: High to Low</option>
               </select>
@@ -249,18 +247,17 @@ function ShopContent({ initialSearch, initialCategory }: { initialSearch: string
         </div>
       )}
 
-      {/* Bottom Inspiration Card */}
       <div className="mt-16 rounded-[30px] border border-[color:var(--brand-border)] bg-[color:var(--brand-soft)]/40 p-8 sm:p-10 shadow-[0_16px_40px_rgba(91,64,50,0.03)]">
         <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
           <div className="max-w-xl">
             <span className="text-xs font-bold uppercase tracking-[0.2em] text-[color:var(--brand-deep)]/75">
-              Nigerian Fashion Identity
+              Editorial Styling
             </span>
             <h3 className="mt-2 text-2xl sm:text-3xl font-extrabold tracking-tight text-[color:var(--brand-deep)]">
-              Build an effortless capsule wardrobe tailored for the city.
+              Build a polished capsule wardrobe.
             </h3>
             <p className="mt-2 text-sm leading-relaxed text-[color:var(--brand-charcoal)]/75">
-              Mix heavyweight 280 GSM graphic tees with unstructured tropical wool blazers and relaxed washed denim for seamless transitions from day to night.
+              Pair structured layers, statement accessories, and soft neutrals for gifting and daily wear.
             </p>
           </div>
           <Link

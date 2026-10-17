@@ -21,7 +21,7 @@ export function NewsletterSignup() {
     }
 
     setStatus("success");
-    setMessage("Welcome to Rebel Atelier! Use promo code REBEL10 at checkout for 10% off your first order.");
+    setMessage("Thanks for subscribing. You will receive updates on new arrivals and curated edits.");
     setEmail("");
   };
 
@@ -32,13 +32,13 @@ export function NewsletterSignup() {
           <div>
             <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-[color:var(--brand-primary)]">
               <Sparkles className="h-3.5 w-3.5" />
-              <span>Atelier Insiders Club</span>
+              <span>Store Updates</span>
             </div>
             <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-[color:var(--brand-deep)] sm:text-4xl">
-              Unlock 10% off your first drop.
+              Get new arrivals in your inbox.
             </h2>
             <p className="mt-3 text-sm text-[color:var(--brand-charcoal)]/75 max-w-lg leading-relaxed">
-              Subscribe for VIP priority notifications on limited-run heavyweight tees, pop-up events in Lagos & Abuja, and private seasonal sales.
+              Subscribe for updates on seasonal launches, gifting edits, and product restocks.
             </p>
           </div>
 
@@ -55,7 +55,7 @@ export function NewsletterSignup() {
                 type="submit"
                 className="inline-flex shrink-0 items-center justify-center rounded-full bg-[color:var(--brand-primary)] px-8 py-3.5 text-xs font-bold uppercase tracking-wider text-[color:var(--brand-deep)] shadow-sm hover:bg-[color:var(--brand-secondary)] transition"
               >
-                Join Atelier
+                Subscribe
               </button>
             </div>
 

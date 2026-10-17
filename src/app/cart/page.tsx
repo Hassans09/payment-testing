@@ -2,21 +2,16 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Minus, Plus, ShoppingBag, Trash2, Truck } from "lucide-react";
+import { ArrowRight, Minus, Plus, ShoppingBag, Trash2 } from "lucide-react";
 
 import { useStore } from "@/components/store-provider";
 import { formatPrice } from "@/lib/store-data";
 
-const FREE_SHIPPING_THRESHOLD = 100000;
-
 export default function CartPage() {
   const { cart, updateCartQuantity, removeFromCart, subtotal, clearCart } = useStore();
 
-  const isFreeShipping = subtotal >= FREE_SHIPPING_THRESHOLD;
-  const shipping = subtotal === 0 ? 0 : isFreeShipping ? 0 : 3500;
+  const shipping = subtotal === 0 ? 0 : 3500;
   const estimatedTotal = subtotal + shipping;
-  const remainingForFree = Math.max(0, FREE_SHIPPING_THRESHOLD - subtotal);
-  const progressPercent = Math.min(100, Math.round((subtotal / FREE_SHIPPING_THRESHOLD) * 100));
 
   if (cart.length === 0) {
     return (
@@ -32,7 +27,7 @@ export default function CartPage() {
             Your bag is currently empty
           </h1>
           <p className="mt-3 text-sm text-[color:var(--brand-charcoal)]/70 max-w-md mx-auto">
-            Discover our curated heavyweight graphic tees, relaxed selvedge denim, and elevated Nigerian tailoring.
+            Add products to your bag to continue to checkout.
           </p>
           <Link
             href="/shop"
@@ -50,7 +45,7 @@ export default function CartPage() {
       <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between border-b border-[color:var(--brand-border)] pb-6">
         <div>
           <span className="text-xs font-bold uppercase tracking-[0.2em] text-[color:var(--brand-primary)]">
-            Rebel Atelier
+            Checkout
           </span>
           <h1 className="mt-1 text-3xl sm:text-4xl font-extrabold tracking-tight text-[color:var(--brand-deep)]">
             Shopping Bag
@@ -63,28 +58,6 @@ export default function CartPage() {
         >
           Clear entire bag
         </button>
-      </div>
-
-      {/* Free Delivery Banner */}
-      <div className="mb-8 rounded-2xl border border-[color:var(--brand-border)] bg-[color:var(--brand-cream)] p-4 shadow-2xs">
-        <div className="flex items-center gap-2.5 text-xs font-semibold text-[color:var(--brand-deep)]">
-          <Truck className="h-4 w-4 text-[color:var(--brand-primary)] shrink-0" />
-          {isFreeShipping ? (
-            <span>
-              🎉 Congratulations! You have unlocked <strong>Free Express Delivery</strong> across Lagos & Abuja!
-            </span>
-          ) : (
-            <span>
-              Add <strong>{formatPrice(remainingForFree)}</strong> more to your bag to enjoy <strong>Free Express Delivery</strong>!
-            </span>
-          )}
-        </div>
-        <div className="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-[color:var(--brand-border)]/60">
-          <div
-            className="h-full rounded-full bg-[color:var(--brand-primary)] transition-all duration-500"
-            style={{ width: `${progressPercent}%` }}
-          />
-        </div>
       </div>
 
       <div className="grid gap-8 lg:grid-cols-[1.25fr_0.75fr]">
@@ -171,10 +144,8 @@ export default function CartPage() {
               <span className="font-semibold text-[color:var(--brand-deep)]">{formatPrice(subtotal)}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span>Estimated Nigerian Delivery</span>
-              <span className="font-semibold text-[color:var(--brand-deep)]">
-                {shipping === 0 ? <span className="text-emerald-700">Free</span> : formatPrice(shipping)}
-              </span>
+              <span>Estimated Shipping</span>
+              <span className="font-semibold text-[color:var(--brand-deep)]">{formatPrice(shipping)}</span>
             </div>
             <div className="border-t border-[color:var(--brand-border)] pt-3.5 flex items-center justify-between text-base font-bold text-[color:var(--brand-deep)]">
               <span>Estimated Total</span>
@@ -200,7 +171,7 @@ export default function CartPage() {
 
           <div className="rounded-2xl bg-[color:var(--brand-cream)] p-3.5 text-[11px] leading-relaxed text-[color:var(--brand-charcoal)]/70 space-y-1">
             <p>🔒 <strong>Secure Checkout</strong> powered by Paystack.</p>
-            <p>📦 <strong>Fast Nationwide Delivery</strong> with real-time GIG tracking.</p>
+            <p>📦 Shipping methods and timing are selected during checkout.</p>
           </div>
         </aside>
       </div>

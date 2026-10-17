@@ -34,7 +34,7 @@ export default function AnimatedLogo({ className = "" }: { className?: string })
 
   return (
     <div className={`store-wordmark ${className}`} aria-hidden={false}>
-      <span className="sr-only">Storefront</span>
+      <span className="sr-only">RebelFashion</span>
 
       <svg
         viewBox="0 0 420 64"
@@ -56,8 +56,8 @@ export default function AnimatedLogo({ className = "" }: { className?: string })
           </style>
         </defs>
 
-        <text x="0" y="42" className="rm-store" fill="url(#brand-grad)">STORE</text>
-        <text x="198" y="54" className="rm-front" fill="var(--brand-chocolate)">Front</text>
+        <text x="0" y="42" className="rm-store" fill="url(#brand-grad)">REBEL</text>
+        <text x="198" y="54" className="rm-front" fill="var(--brand-chocolate)">Fashion</text>
         <path
           d="M6 56 C60 70 140 66 190 52 C240 38 320 46 414 56"
           fill="none"

@@ -23,17 +23,7 @@
 }
 
 html { scroll-behavior: smooth; }
-body {
-  margin: 0;
-  min-height: 100vh;
-  max-width: 100%;
-  overflow-x: hidden;
-  background: var(--brand-background);
-  color: var(--brand-charcoal);
-  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  text-rendering: optimizeLegibility;
-}
+body { margin: 0; min-height: 100vh; max-width: 100%; overflow-x: hidden; background: var(--brand-background); color: var(--brand-charcoal); font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
 *, *::before, *::after { box-sizing: border-box; }
 img, svg, video, canvas { max-width: 100%; }
 img { display: block; }
@@ -41,11 +31,9 @@ button, input, select, textarea { font: inherit; max-width: 100%; }
 button, a { -webkit-tap-highlight-color: transparent; }
 main { min-width: 0; background: var(--brand-background); }
 ::selection { background: rgba(196, 154, 120, 0.25); }
-
 .flex > *, .grid > *, form > *, aside > * { min-width: 0; }
 
 @media (max-width: 1023px) {
-  /* Keep the checkout summary readable while it moves below the form. */
   form, form ~ aside { min-width: 0; }
   form [class*="justify-between"], aside [class*="justify-between"] { min-width: 0; }
   form [class*="justify-between"] > *, aside [class*="justify-between"] > * { min-width: 0; }
@@ -55,26 +43,19 @@ main { min-width: 0; background: var(--brand-background); }
   h1 { font-size: clamp(1.75rem, 8vw, 2.25rem); line-height: 1.08; }
   h2 { font-size: clamp(1.25rem, 6vw, 1.75rem); line-height: 1.15; }
   p, label, input, select, textarea, button, a { overflow-wrap: anywhere; }
-
-  /* Product detail: stop price/status and selector headers from becoming wide rows. */
   .flex.items-baseline { flex-wrap: wrap; }
   .flex.items-center.justify-between { gap: 0.75rem; }
   .flex.items-center.justify-between > * { min-width: 0; }
-
-  /* Checkout/payment panels: labels, badges and bank details wrap cleanly. */
   form .rounded-\[30px\], aside .rounded-\[30px\], .rounded-\[36px\] { border-radius: 1.25rem; }
   form .border-b, aside .border-b { min-width: 0; }
   form .border-b > *, aside .border-b > * { min-width: 0; }
   form span, form p, aside span, aside p { overflow-wrap: anywhere; }
   form [class*="tracking-wider"], aside [class*="tracking-wider"] { letter-spacing: 0.06em; }
-
-  /* Keep cart rows usable when names and prices are long. */
   article, [class*="rounded-3xl"], [class*="rounded-2xl"] { min-width: 0; }
   article a, article h3 { overflow-wrap: anywhere; }
 }
 
 @media (max-width: 639px) {
-  /* Narrow screens need one-column fields and full-width actions. */
   form .sm\:grid-cols-2 { grid-template-columns: minmax(0, 1fr); }
   form .sm\:grid-cols-3 { grid-template-columns: minmax(0, 1fr); }
   form .sm\:col-span-2 { grid-column: auto; }
@@ -82,22 +63,16 @@ main { min-width: 0; background: var(--brand-background); }
   form .sm\:w-36 { width: 100%; }
   form .sm\:items-center { align-items: stretch; }
   form .sm\:text-right { text-align: left; }
-
-  /* Header and drawer controls remain inside the viewport. */
   header .min-w-\[140px\], footer .min-w-\[150px\] { min-width: 0; }
   header svg { flex-shrink: 0; }
   .fixed.inset-y-0.right-0 { padding-left: 0; }
   .fixed.inset-y-0.right-0 > aside { width: min(100vw, 28rem); max-width: 100vw; }
   .fixed.inset-y-0.right-0 aside > div { min-width: 0; }
-
-  /* Small-screen empty states and content cards use compact padding. */
   .px-4 { padding-left: 0.875rem; padding-right: 0.875rem; }
   form .p-6, aside .p-6 { padding: 1rem; }
   form .p-8 { padding: 1rem; }
   form .gap-10 { gap: 1.5rem; }
   form .space-y-8 > :not([hidden]) ~ :not([hidden]) { margin-top: 1.5rem; }
-
-  /* Dense product/account grids collapse before they can become cramped. */
   .grid.grid-cols-2 { grid-template-columns: minmax(0, 1fr); }
   .grid.grid-cols-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   aside .flex.items-center.justify-between { align-items: flex-start; gap: 0.75rem; }
@@ -113,35 +88,24 @@ main { min-width: 0; background: var(--brand-background); }
   .fixed.inset-y-0.right-0 aside { width: 100vw; }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  html { scroll-behavior: auto; }
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
-}
-
-:root {
-  --motion-fast: 160ms;
-  --motion-medium: 320ms;
-  --motion-slow: 3000ms;
-  --motion-ease: cubic-bezier(0.2, 0.9, 0.2, 1);
-}
-
+:root { --motion-fast: 160ms; --motion-medium: 320ms; --motion-slow: 3000ms; --motion-ease: cubic-bezier(0.2, 0.9, 0.2, 1); }
 @keyframes fade-up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes float-slow { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+@keyframes card-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
 @keyframes bump { 0%, 100% { transform: scale(1); } 30% { transform: scale(1.12); } }
 .motion-fade-up { opacity: 1; animation: fade-up var(--motion-medium) var(--motion-ease) both; will-change: transform, opacity; }
 .motion-fade-up.fast { animation-duration: var(--motion-fast); }
 .motion-fade-up.slow { animation-duration: var(--motion-slow); }
-.motion-float { animation: float-slow var(--motion-slow) var(--motion-ease) infinite; will-change: transform; transform-origin: center; pointer-events: none; opacity: 0.95; }
+.motion-float, .motion-float-slow { animation: float-slow var(--motion-slow) var(--motion-ease) infinite; will-change: transform; transform-origin: center; }
+.motion-card-float { animation: card-float 4.5s var(--motion-ease) infinite; animation-delay: var(--card-delay, 0ms); transition: transform var(--motion-medium) var(--motion-ease), box-shadow var(--motion-medium) var(--motion-ease); will-change: transform; }
+.motion-card-float:hover { animation-play-state: paused; transform: translateY(-8px); box-shadow: 0 20px 45px rgba(91, 64, 50, 0.13); }
 .motion-bump { animation: bump var(--motion-fast) var(--motion-ease) both; will-change: transform; }
 .motion-pressable { transition: transform var(--motion-fast) var(--motion-ease), box-shadow var(--motion-fast) var(--motion-ease); will-change: transform, box-shadow; }
 .motion-accelerated { transform: translateZ(0); }
 
 @media (prefers-reduced-motion: reduce) {
-  .motion-fade-up, .motion-float, .motion-bump, .motion-pressable, .motion-accelerated { animation: none !important; transition: none !important; }
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+  .motion-fade-up, .motion-float, .motion-float-slow, .motion-card-float, .motion-bump, .motion-pressable, .motion-accelerated { animation: none !important; transition: none !important; }
   .motion-fade-up { opacity: 1 !important; }
 }

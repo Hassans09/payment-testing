@@ -48,6 +48,8 @@ export function Footer() {
           </div>
 
           {/* Client Concierge */}
+
+          {/* Client Concierge */}
           <div className="space-y-4">
             <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-[color:var(--brand-deep)]">
               Client Concierge
@@ -55,7 +57,7 @@ export function Footer() {
             <ul className="space-y-2.5 text-xs text-[color:var(--brand-charcoal)]/75">
               <li>
                 <Link href="/account" className="hover:text-[color:var(--brand-primary)] transition">
-                Order Tracking Coming Soon
+                  Order Tracking Coming Soon
                 </Link>
               </li>
               <li>
@@ -73,10 +75,9 @@ export function Footer() {
                   Express Checkout
                 </Link>
               </li>
-              
-              </li>
             </ul>
           </div>
+
 
           {/* Verified Guarantee & Payment methods */}
           <div className="space-y-4">

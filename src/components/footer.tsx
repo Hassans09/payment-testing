@@ -73,10 +73,7 @@ export function Footer() {
                   Express Checkout
                 </Link>
               </li>
-              <li>
-                <Link href="/signin" className="hover:text-[color:var(--brand-primary)] transition">
-                Sign In
-                </Link>
+              
               </li>
             </ul>
           </div>

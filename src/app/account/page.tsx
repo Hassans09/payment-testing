@@ -42,7 +42,6 @@ export default function AccountPage() {
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8 lg:py-12">
       <div className="mb-8 flex flex-col gap-4 border-b border-[color:var(--brand-border)] pb-6 sm:flex-row sm:items-end sm:justify-between">
         <div><span className="text-xs font-bold uppercase tracking-[0.2em] text-[color:var(--brand-primary)]">Account Dashboard</span><h1 className="mt-1 text-3xl font-extrabold tracking-tight text-[color:var(--brand-deep)] sm:text-4xl">Welcome back</h1><p className="mt-1 text-xs text-[color:var(--brand-charcoal)]/65">Manage orders, addresses, and saved products.</p></div>
-        <Link href="/signin" className="inline-flex items-center justify-center rounded-full border border-[color:var(--brand-border)] bg-white px-6 py-2.5 text-xs font-semibold uppercase tracking-wider text-[color:var(--brand-deep)] transition hover:bg-[color:var(--brand-soft)]/40">Sign Out</Link>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">

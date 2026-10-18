@@ -55,7 +55,7 @@ export function Footer() {
             <ul className="space-y-2.5 text-xs text-[color:var(--brand-charcoal)]/75">
               <li>
                 <Link href="/account" className="hover:text-[color:var(--brand-primary)] transition">
-                Track Orders
+                Order Tracking Coming Soon
                 </Link>
               </li>
               <li>

@@ -148,7 +148,9 @@ const total = order?.total ?? null;
             </span>
             <p className="font-semibold text-sm text-[color:var(--brand-deep)]">{address}</p>
             <p className="text-[color:var(--brand-charcoal)]/65">
-              Tracking updates: {order?.phone || "+1 555 0100"}
+              {order?.phone
+  ? `Contact phone: ${order.phone}`
+  : "Contact phone unavailable"}
             </p>
           </div>
 

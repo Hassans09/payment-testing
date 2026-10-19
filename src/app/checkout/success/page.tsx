@@ -65,11 +65,13 @@ const customerName = order?.customerName ?? null;
 const address = order?.address ?? null;
 const total = order?.total ?? null;
   const paymentMethodLabel =
-    order?.paymentMethod === "transfer"
-      ? "Direct Bank Transfer"
-      : order?.paymentMethod === "pod"
-        ? "Pay on Delivery"
-        : "Instant Card Payment";
+  order?.paymentMethod === "transfer"
+    ? "Bank Transfer"
+    : order?.paymentMethod === "pod"
+      ? "Pay on Delivery"
+      : order?.paymentMethod === "fairsurepay"
+        ? "FairSurePay"
+        : "Payment Status Pending";
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8">

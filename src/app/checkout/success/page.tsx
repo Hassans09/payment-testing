@@ -60,10 +60,10 @@ function getServerOrder() {
 export default function CheckoutSuccessPage() {
   const order = useSyncExternalStore(subscribeOrder, getSessionOrder, getServerOrder);
 
-  const orderId = order?.orderId ?? "ORD-74291";
-  const customerName = order?.customerName ?? "Valued Customer";
-  const address = order?.address ?? "120 Market Street, Central City";
-  const total = order?.total ?? 85000;
+  const orderId = order?.orderId ?? null;
+const customerName = order?.customerName ?? null;
+const address = order?.address ?? null;
+const total = order?.total ?? null;
   const paymentMethodLabel =
     order?.paymentMethod === "transfer"
       ? "Direct Bank Transfer"

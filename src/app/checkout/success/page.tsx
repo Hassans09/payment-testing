@@ -82,24 +82,26 @@ const total = order?.total ?? null;
             <CheckCircle2 className="h-9 w-9" />
           </div>
           <span className="inline-flex rounded-full bg-[color:var(--brand-primary)]/20 px-3.5 py-1 text-xs font-bold uppercase tracking-wider text-[color:var(--brand-deep)]">
-            Order Confirmed • {orderId}
+            {orderId ? `Order Reference • ${orderId}` : "Order Status"}
           </span>
           <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-[color:var(--brand-deep)]">
             Thank you, {customerName}!
           </h1>
           <p className="max-w-lg mx-auto text-sm text-[color:var(--brand-charcoal)]/75 leading-relaxed">
-            Your order has been received and is now in our fulfillment queue.
-          </p>
+  {order
+    ? "Your checkout details have been recorded. Your order and payment status will be confirmed once verification is complete."
+    : "No order details were found for this session. Please return to checkout or contact support if you believe an order was submitted."}
+</p>
         </div>
 
         {/* Real-time Tracking Roadmap */}
         <div className="rounded-3xl border border-[color:var(--brand-border)] bg-[color:var(--brand-cream)] p-6 space-y-4">
           <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-[color:var(--brand-deep)]">
-            <span>Order Pipeline</span>
+            <span>Order Progress Preview</span>
             <span className="text-[color:var(--brand-primary)] flex items-center gap-1">
-              <Clock className="h-3.5 w-3.5" />
-              <span>Tracking Active</span>
-            </span>
+  <Clock className="h-3.5 w-3.5" />
+  <span>Tracking Coming Soon</span>
+</span>
           </div>
 
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 pt-2">
@@ -157,7 +159,7 @@ const total = order?.total ?? null;
             </span>
             <p className="font-semibold text-sm text-[color:var(--brand-deep)]">{paymentMethodLabel}</p>
             <p className="text-[color:var(--brand-charcoal)]/65">
-              Settlement Amount: <strong className="text-[color:var(--brand-deep)]">{formatPrice(total)}</strong>
+              Order Total: <strong className="text-[color:var(--brand-deep)]">{formatPrice(total)}</strong>
             </p>
           </div>
         </div>

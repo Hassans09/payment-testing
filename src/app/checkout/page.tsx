@@ -1,555 +1,716 @@
+
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { FormEvent, useMemo, useState } from "react";
+import { useState, type FormEvent } from "react";
 import {
   ArrowLeft,
-  Check,
-  Copy,
+  CheckCircle2,
   CreditCard,
-  Lock,
-  MapPin,
+  Landmark,
+  LockKeyhole,
+  PackageCheck,
   ShieldCheck,
+  Truck,
 } from "lucide-react";
 
 import { useStore } from "@/components/store-provider";
 import { formatPrice } from "@/lib/store-data";
 
 const NIGERIAN_STATES = [
-  "Lagos",
-  "Abuja (FCT)",
-  "Rivers",
-  "Oyo",
-  "Kano",
-  "Ogun",
-  "Enugu",
-  "Delta",
-  "Edo",
-  "Kaduna",
-  "Anambra",
-  "Kwara",
-  "Akwa Ibom",
-  "Plateau",
-  "Ondo",
-  "Imo",
   "Abia",
+  "Adamawa",
+  "Akwa Ibom",
+  "Anambra",
+  "Bauchi",
+  "Bayelsa",
+  "Benue",
+  "Borno",
   "Cross River",
+  "Delta",
+  "Ebonyi",
+  "Edo",
+  "Ekiti",
+  "Enugu",
+  "Federal Capital Territory (FCT)",
+  "Gombe",
+  "Imo",
+  "Jigawa",
+  "Kaduna",
+  "Kano",
+  "Katsina",
+  "Kebbi",
+  "Kogi",
+  "Kwara",
+  "Lagos",
+  "Nasarawa",
+  "Niger",
+  "Ogun",
+  "Ondo",
+  "Osun",
+  "Oyo",
+  "Plateau",
+  "Rivers",
+  "Sokoto",
+  "Taraba",
+  "Yobe",
+  "Zamfara",
 ];
 
+type PaymentMethod = "card" | "transfer" | "pod";
+type ShippingMethod = "standard" | "priority";
+
 export default function CheckoutPage() {
-  const router = useRouter();
   const { cart, subtotal, clearCart } = useStore();
 
   const [form, setForm] = useState({
+    fullName: "",
     email: "",
-    firstName: "",
-    lastName: "",
     phone: "",
     address: "",
     city: "",
-    state: "Lagos",
-    deliveryNotes: "",
-    shippingMethod: "standard", // standard | priority
-    paymentMethod: "paystack", // paystack | transfer | pod
+    state: "",
+    shippingMethod: "standard" as ShippingMethod,
+    paymentMethod: "card" as PaymentMethod,
   });
 
-  const [copiedBank, setCopiedBank] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
 
-  const shippingCost = useMemo(() => {
-    if (subtotal === 0) return 0;
-    if (form.shippingMethod === "priority") return 6500;
-    return 3500;
-  }, [subtotal, form.shippingMethod]);
+  const shippingCost =
+    subtotal === 0 ? 0 : form.shippingMethod === "priority" ? 6500 : 3500;
 
   const finalTotal = Math.max(0, subtotal + shippingCost);
 
-  const copyAccountNumber = () => {
-    if (typeof navigator !== "undefined" && navigator.clipboard) {
-      navigator.clipboard.writeText("0249827182");
-      setCopiedBank(true);
-      setTimeout(() => setCopiedBank(false), 2500);
-    }
-  };
+  function updateField(
+    field: keyof typeof form,
+    value: string
+  ) {
+    setForm((current) => ({ ...current, [field]: value }));
+    setErrors((current) => ({ ...current, [field]: "" }));
+    setSubmitError("");
+  }
 
-  const onSubmit = (event: FormEvent<HTMLFormElement>) => {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setSubmitError("");
+
     const nextErrors: Record<string, string> = {};
 
-    if (!form.firstName.trim()) nextErrors.firstName = "First name is required.";
-    if (!form.lastName.trim()) nextErrors.lastName = "Last name is required.";
-    if (!form.address.trim()) nextErrors.address = "Delivery street address is required.";
-    if (!form.city.trim()) nextErrors.city = "City / District is required.";
-
-    const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim());
-    if (!form.email.trim()) {
-      nextErrors.email = "Email is required.";
-    } else if (!emailValid) {
-      nextErrors.email = "Please provide a valid email.";
+    if (!form.fullName.trim()) {
+      nextErrors.fullName = "Please enter your full name.";
     }
 
-    if (!form.phone.trim()) {
-      nextErrors.phone = "Phone number is required.";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+      nextErrors.email = "Please enter a valid email address.";
+    }
+
+    const phoneDigits = form.phone.replace(/\D/g, "");
+    if (phoneDigits.length < 10 || phoneDigits.length > 11) {
+      nextErrors.phone = "Please enter a valid Nigerian phone number.";
+    }
+
+    if (!form.address.trim()) {
+      nextErrors.address = "Please enter your delivery address.";
+    }
+
+    if (!form.city.trim()) {
+      nextErrors.city = "Please enter your city or LGA.";
+    }
+
+    if (!form.state) {
+      nextErrors.state = "Please select your state.";
     }
 
     setErrors(nextErrors);
 
-    if (Object.keys(nextErrors).length === 0) {
-      setIsSubmitting(true);
-      // Save order metadata to sessionStorage for confirmation screen
-      if (typeof window !== "undefined") {
-        try {
-          const orderSnapshot = {
-            orderId: `ORD-${Math.floor(10000 + Math.random() * 90000)}`,
-            customerName: `${form.firstName} ${form.lastName}`,
-            email: form.email,
-            phone: form.phone,
-            address: `${form.address}, ${form.city}, ${form.state}`,
-            paymentMethod: form.paymentMethod,
-            total: finalTotal,
-            subtotal,
-            shippingCost,
-            items: cart,
-            date: new Date().toLocaleDateString("en-NG", {
-              day: "numeric",
-              month: "short",
-              year: "numeric",
-            }),
-          };
-          sessionStorage.setItem("last_store_order", JSON.stringify(orderSnapshot));
-        } catch {
-          // ignore
-        }
+    if (Object.keys(nextErrors).length > 0) return;
+
+    if (cart.length === 0) {
+      setSubmitError("Your shopping bag is empty.");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      /*
+       * BACKEND INTEGRATION CONTRACT
+       *
+       * POST /api/checkout
+       *
+       * The backend must validate the cart and calculate the real total.
+       *
+       * Card / transfer response:
+       * { "checkoutUrl": "https://..." }
+       *
+       * Pay on delivery response:
+       * { "orderId": "a-real-order-reference" }
+       *
+       * The backend engineer can adjust this contract to match the
+       * project's actual API and FairSurePay integration.
+       */
+
+      const response = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customer: {
+            fullName: form.fullName.trim(),
+            email: form.email.trim(),
+            phone: form.phone.trim(),
+            address: form.address.trim(),
+            city: form.city.trim(),
+            state: form.state,
+          },
+          items: cart,
+          shippingMethod: form.shippingMethod,
+          paymentMethod: form.paymentMethod,
+          displayedSubtotal: subtotal,
+          displayedShipping: shippingCost,
+          displayedTotal: finalTotal,
+        }),
+      });
+
+      const data: {
+        error?: string;
+        checkoutUrl?: string;
+        orderId?: string;
+        total?: number;
+        subtotal?: number;
+        shippingCost?: number;
+      } = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(
+          data.error ||
+            "We couldn't process your request. Please try again."
+        );
       }
 
-      setTimeout(() => {
-        clearCart();
-        router.push("/checkout/success");
-      }, 700);
+      if (form.paymentMethod === "card" || form.paymentMethod === "transfer") {
+        if (
+          !data.checkoutUrl ||
+          !/^https:\/\//i.test(data.checkoutUrl)
+        ) {
+          throw new Error(
+            "The payment service has not returned a valid checkout link. No payment has been confirmed."
+          );
+        }
+
+        // The backend supplies the hosted payment URL.
+        window.location.assign(data.checkoutUrl);
+        return;
+      }
+
+      if (!data.orderId) {
+        throw new Error(
+          "The server did not return an order reference. Please contact support before trying again."
+        );
+      }
+
+      // Store confirmation details only after the backend accepts the order.
+      const orderSnapshot = {
+        orderId: data.orderId,
+        customerName: form.fullName.trim(),
+        email: form.email.trim(),
+        phone: form.phone.trim(),
+        address: `${form.address.trim()}, ${form.city.trim()}, ${form.state}`,
+        paymentMethod: "pod",
+        total: data.total ?? finalTotal,
+        subtotal: data.subtotal ?? subtotal,
+        shippingCost: data.shippingCost ?? shippingCost,
+        items: cart,
+        date: new Date().toLocaleDateString("en-NG", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        }),
+      };
+
+      sessionStorage.setItem(
+        "last_store_order",
+        JSON.stringify(orderSnapshot)
+      );
+
+      clearCart();
+      window.location.assign("/checkout/success");
+    } catch (error) {
+      setSubmitError(
+        error instanceof Error
+          ? error.message
+          : "Something went wrong. Please try again."
+      );
+    } finally {
+      setIsSubmitting(false);
     }
-  };
+  }
 
   if (cart.length === 0) {
     return (
-      <div className="mx-auto max-w-3xl px-4 py-20 sm:px-6 lg:px-8">
-        <div className="rounded-[36px] border border-dashed border-[color:var(--brand-border)] bg-[color:var(--brand-white)] p-12 text-center shadow-[0_16px_40px_rgba(91,64,50,0.04)]">
-          <span className="text-xs font-bold uppercase tracking-[0.2em] text-[color:var(--brand-primary)]">
-            Express Checkout
-          </span>
-          <h1 className="mt-3 text-3xl sm:text-4xl font-extrabold tracking-tight text-[color:var(--brand-deep)]">
+      <main className="mx-auto max-w-3xl px-4 py-20 sm:px-6">
+        <div className="rounded-3xl border border-[color:var(--brand-border)] bg-[color:var(--brand-white)] p-10 text-center">
+          <PackageCheck className="mx-auto h-10 w-10 text-[color:var(--brand-primary)]" />
+          <h1 className="mt-4 text-3xl font-bold text-[color:var(--brand-deep)]">
             Your shopping bag is empty
           </h1>
-          <p className="mt-3 text-sm text-[color:var(--brand-charcoal)]/70 max-w-sm mx-auto">
-            Add items to your bag before starting checkout.
+          <p className="mt-3 text-sm text-[color:var(--brand-charcoal)]/70">
+            Add something you love before checking out.
           </p>
           <Link
             href="/shop"
-            className="mt-8 inline-flex items-center justify-center rounded-full bg-[color:var(--brand-primary)] px-8 py-3.5 text-xs font-bold uppercase tracking-wider text-[color:var(--brand-deep)] shadow-sm hover:bg-[color:var(--brand-secondary)] transition"
+            className="mt-6 inline-flex rounded-full bg-[color:var(--brand-deep)] px-7 py-3 text-sm font-semibold text-white"
           >
-            Browse Collection
+            Browse collection
           </Link>
         </div>
-      </div>
+      </main>
     );
   }
 
+  const inputClass =
+    "mt-2 w-full rounded-xl border border-[color:var(--brand-border)] bg-[color:var(--brand-cream)] px-4 py-3 text-sm text-[color:var(--brand-charcoal)] outline-none transition focus:border-[color:var(--brand-primary)]";
+
+  const sectionClass =
+    "rounded-3xl border border-[color:var(--brand-border)] bg-[color:var(--brand-white)] p-5 sm:p-7";
+
   return (
-    <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-      {/* Top Banner */}
-      <div className="mb-8 flex items-center justify-between border-b border-[color:var(--brand-border)] pb-5">
+    <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mb-8 flex items-center justify-between gap-4 border-b border-[color:var(--brand-border)] pb-6">
         <div>
-          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-[color:var(--brand-primary)]">
+          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-[color:var(--brand-primary)]">
             <ShieldCheck className="h-4 w-4" />
-            <span>Secure Checkout</span>
+            Secure checkout
           </div>
-          <h1 className="mt-1 text-3xl sm:text-4xl font-extrabold tracking-tight text-[color:var(--brand-deep)]">
-            Complete Your Order
+          <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-[color:var(--brand-deep)] sm:text-4xl">
+            Complete your order
           </h1>
+          <p className="mt-2 text-sm text-[color:var(--brand-charcoal)]/70">
+            A few details, then choose how you want to pay.
+          </p>
         </div>
+
         <Link
           href="/cart"
-          className="hidden sm:flex items-center gap-1.5 text-xs font-semibold text-[color:var(--brand-deep)] hover:text-[color:var(--brand-primary)] transition"
+          className="hidden items-center gap-2 text-sm font-semibold text-[color:var(--brand-deep)] hover:text-[color:var(--brand-primary)] sm:flex"
         >
-          <ArrowLeft className="h-3.5 w-3.5" />
-          <span>Back to bag</span>
+          <ArrowLeft className="h-4 w-4" />
+          Shopping bag
         </Link>
       </div>
 
-      <div className="grid gap-10 lg:grid-cols-[1.25fr_0.75fr]">
-        {/* Form Container */}
-        <form onSubmit={onSubmit} className="space-y-8">
-          {/* Section 1: Customer & Delivery Details */}
-          <div className="rounded-[30px] border border-[color:var(--brand-border)] bg-[color:var(--brand-white)] p-6 sm:p-8 shadow-[0_12px_35px_rgba(91,64,50,0.03)] space-y-6">
-            <div className="flex items-center gap-3 border-b border-[color:var(--brand-border)]/60 pb-4">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[color:var(--brand-deep)] text-xs font-bold text-white">
-                1
+      <form onSubmit={handleSubmit} noValidate>
+        <div className="grid items-start gap-6 lg:grid-cols-[1.3fr_0.7fr]">
+          <div className="space-y-6">
+            {/* Delivery details */}
+            <section className={sectionClass}>
+              <div className="mb-6 flex items-center gap-3">
+                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[color:var(--brand-deep)] text-sm font-bold text-white">
+                  1
+                </span>
+                <div>
+                  <h2 className="text-lg font-bold text-[color:var(--brand-deep)]">
+                    Delivery information
+                  </h2>
+                  <p className="text-xs text-[color:var(--brand-charcoal)]/65">
+                    Where should we send your order?
+                  </p>
+                </div>
               </div>
-              <h2 className="text-xl font-bold tracking-tight text-[color:var(--brand-deep)]">
-                Delivery & Contact Information
-              </h2>
-            </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <label className="block">
-                <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[color:var(--brand-charcoal)]">
-                  First Name *
-                </span>
-                <input
-                  value={form.firstName}
-                  onChange={(e) => setForm({ ...form, firstName: e.target.value })}
-                  placeholder="e.g. Alex"
-                  className="w-full rounded-2xl border border-[color:var(--brand-border)] bg-[color:var(--brand-cream)] px-4 py-3 text-sm text-[color:var(--brand-charcoal)] outline-none transition focus:border-[color:var(--brand-primary)]"
-                />
-                {errors.firstName && <span className="mt-1 block text-xs text-red-600">{errors.firstName}</span>}
-              </label>
-
-              <label className="block">
-                <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[color:var(--brand-charcoal)]">
-                  Last Name *
-                </span>
-                <input
-                  value={form.lastName}
-                  onChange={(e) => setForm({ ...form, lastName: e.target.value })}
-                  placeholder="e.g. Taylor"
-                  className="w-full rounded-2xl border border-[color:var(--brand-border)] bg-[color:var(--brand-cream)] px-4 py-3 text-sm text-[color:var(--brand-charcoal)] outline-none transition focus:border-[color:var(--brand-primary)]"
-                />
-                {errors.lastName && <span className="mt-1 block text-xs text-red-600">{errors.lastName}</span>}
-              </label>
-
-              <label className="block sm:col-span-2">
-                <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[color:var(--brand-charcoal)]">
-                  Email Address (for Receipt & Tracking) *
-                </span>
-                <input
-                  type="email"
-                  value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  placeholder="customer@example.com"
-                  className="w-full rounded-2xl border border-[color:var(--brand-border)] bg-[color:var(--brand-cream)] px-4 py-3 text-sm text-[color:var(--brand-charcoal)] outline-none transition focus:border-[color:var(--brand-primary)]"
-                />
-                {errors.email && <span className="mt-1 block text-xs text-red-600">{errors.email}</span>}
-              </label>
-
-              <label className="block sm:col-span-2">
-                <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[color:var(--brand-charcoal)] flex items-center justify-between">
-                  <span>Phone Number *</span>
-                  <span className="text-[10px] text-emerald-800 font-normal">Order updates enabled</span>
-                </span>
-                <div className="flex items-center rounded-2xl border border-[color:var(--brand-border)] bg-[color:var(--brand-cream)] px-3 focus-within:border-[color:var(--brand-primary)]">
-                  <span className="text-xs font-bold text-[color:var(--brand-deep)] pr-2 border-r border-[color:var(--brand-border)]">
-                    +234
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="block sm:col-span-2">
+                  <span className="text-sm font-semibold text-[color:var(--brand-deep)]">
+                    Full name *
                   </span>
                   <input
-                    type="tel"
-                    value={form.phone}
-                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                    placeholder="801 234 5678"
-                    className="w-full bg-transparent px-3 py-3 text-sm text-[color:var(--brand-charcoal)] outline-none"
+                    autoComplete="name"
+                    value={form.fullName}
+                    onChange={(e) => updateField("fullName", e.target.value)}
+                    placeholder="Enter your full name"
+                    className={inputClass}
                   />
+                  {errors.fullName && (
+                    <span className="mt-1 block text-xs text-red-600">
+                      {errors.fullName}
+                    </span>
+                  )}
+                </label>
+
+                <label className="block sm:col-span-2">
+                  <span className="text-sm font-semibold text-[color:var(--brand-deep)]">
+                    Email address *
+                  </span>
+                  <input
+                    type="email"
+                    autoComplete="email"
+                    value={form.email}
+                    onChange={(e) => updateField("email", e.target.value)}
+                    placeholder="you@example.com"
+                    className={inputClass}
+                  />
+                  {errors.email && (
+                    <span className="mt-1 block text-xs text-red-600">
+                      {errors.email}
+                    </span>
+                  )}
+                </label>
+
+                <label className="block sm:col-span-2">
+                  <span className="text-sm font-semibold text-[color:var(--brand-deep)]">
+                    Phone number *
+                  </span>
+                  <div className="mt-2 flex items-center rounded-xl border border-[color:var(--brand-border)] bg-[color:var(--brand-cream)] focus-within:border-[color:var(--brand-primary)]">
+                    <span className="border-r border-[color:var(--brand-border)] px-3 py-3 text-sm font-semibold text-[color:var(--brand-deep)]">
+                      +234
+                    </span>
+                    <input
+                      type="tel"
+                      autoComplete="tel-national"
+                      value={form.phone}
+                      onChange={(e) => updateField("phone", e.target.value)}
+                      placeholder="801 234 5678"
+                      className="w-full bg-transparent px-3 py-3 text-sm outline-none"
+                    />
+                  </div>
+                  {errors.phone && (
+                    <span className="mt-1 block text-xs text-red-600">
+                      {errors.phone}
+                    </span>
+                  )}
+                </label>
+
+                <label className="block sm:col-span-2">
+                  <span className="text-sm font-semibold text-[color:var(--brand-deep)]">
+                    Street address / house number *
+                  </span>
+                  <input
+                    autoComplete="street-address"
+                    value={form.address}
+                    onChange={(e) => updateField("address", e.target.value)}
+                    placeholder="House number, street and area"
+                    className={inputClass}
+                  />
+                  {errors.address && (
+                    <span className="mt-1 block text-xs text-red-600">
+                      {errors.address}
+                    </span>
+                  )}
+                </label>
+
+                <label className="block">
+                  <span className="text-sm font-semibold text-[color:var(--brand-deep)]">
+                    City / LGA *
+                  </span>
+                  <input
+                    autoComplete="address-level2"
+                    value={form.city}
+                    onChange={(e) => updateField("city", e.target.value)}
+                    placeholder="Your city or LGA"
+                    className={inputClass}
+                  />
+                  {errors.city && (
+                    <span className="mt-1 block text-xs text-red-600">
+                      {errors.city}
+                    </span>
+                  )}
+                </label>
+
+                <label className="block">
+                  <span className="text-sm font-semibold text-[color:var(--brand-deep)]">
+                    State / FCT *
+                  </span>
+                  <select
+                    value={form.state}
+                    onChange={(e) => updateField("state", e.target.value)}
+                    className={inputClass}
+                  >
+                    <option value="">Select state</option>
+                    {NIGERIAN_STATES.map((state) => (
+                      <option key={state} value={state}>
+                        {state === "Federal Capital Territory (FCT)"
+                          ? "Abuja (FCT)"
+                          : state}
+                      </option>
+                    ))}
+                  </select>
+                  {errors.state && (
+                    <span className="mt-1 block text-xs text-red-600">
+                      {errors.state}
+                    </span>
+                  )}
+                </label>
+              </div>
+            </section>
+
+            {/* Shipping */}
+            <section className={sectionClass}>
+              <div className="mb-5 flex items-center gap-3">
+                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[color:var(--brand-deep)] text-sm font-bold text-white">
+                  2
+                </span>
+                <div>
+                  <h2 className="text-lg font-bold text-[color:var(--brand-deep)]">
+                    Shipping & dispatch
+                  </h2>
+                  <p className="text-xs text-[color:var(--brand-charcoal)]/65">
+                    Choose your preferred delivery option.
+                  </p>
                 </div>
-                {errors.phone && <span className="mt-1 block text-xs text-red-600">{errors.phone}</span>}
-              </label>
+              </div>
 
-              <label className="block sm:col-span-2">
-                <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[color:var(--brand-charcoal)]">
-                  Street Address & House / Flat No. *
-                </span>
-                <input
-                  value={form.address}
-                  onChange={(e) => setForm({ ...form, address: e.target.value })}
-                  placeholder="e.g. 120 Market Street"
-                  className="w-full rounded-2xl border border-[color:var(--brand-border)] bg-[color:var(--brand-cream)] px-4 py-3 text-sm text-[color:var(--brand-charcoal)] outline-none transition focus:border-[color:var(--brand-primary)]"
-                />
-                {errors.address && <span className="mt-1 block text-xs text-red-600">{errors.address}</span>}
-              </label>
-
-              <label className="block">
-                <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[color:var(--brand-charcoal)]">
-                  City / Area *
-                </span>
-                <input
-                  value={form.city}
-                  onChange={(e) => setForm({ ...form, city: e.target.value })}
-                  placeholder="e.g. Central City"
-                  className="w-full rounded-2xl border border-[color:var(--brand-border)] bg-[color:var(--brand-cream)] px-4 py-3 text-sm text-[color:var(--brand-charcoal)] outline-none transition focus:border-[color:var(--brand-primary)]"
-                />
-                {errors.city && <span className="mt-1 block text-xs text-red-600">{errors.city}</span>}
-              </label>
-
-              <label className="block">
-                <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[color:var(--brand-charcoal)]">
-                  State in Nigeria *
-                </span>
-                <select
-                  value={form.state}
-                  onChange={(e) => setForm({ ...form, state: e.target.value })}
-                  className="w-full rounded-2xl border border-[color:var(--brand-border)] bg-[color:var(--brand-cream)] px-4 py-3 text-sm text-[color:var(--brand-charcoal)] outline-none transition focus:border-[color:var(--brand-primary)] cursor-pointer"
+              <div className="grid gap-3 sm:grid-cols-2">
+                <button
+                  type="button"
+                  aria-pressed={form.shippingMethod === "standard"}
+                  onClick={() => updateField("shippingMethod", "standard")}
+                  className={`rounded-2xl border-2 p-4 text-left transition ${
+                    form.shippingMethod === "standard"
+                      ? "border-[color:var(--brand-deep)] bg-[color:var(--brand-cream)]"
+                      : "border-[color:var(--brand-border)] hover:border-[color:var(--brand-primary)]"
+                  }`}
                 >
-                  {NIGERIAN_STATES.map((s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-          </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <Truck className="h-5 w-5 text-[color:var(--brand-primary)]" />
+                    {form.shippingMethod === "standard" && (
+                      <CheckCircle2 className="h-4 w-4" />
+                    )}
+                  </div>
+                  <p className="mt-3 font-bold text-[color:var(--brand-deep)]">
+                    Standard dispatch
+                  </p>
+                  <p className="mt-1 text-sm text-[color:var(--brand-charcoal)]/70">
+                    2–4 business days
+                  </p>
+                  <p className="mt-3 font-bold text-[color:var(--brand-deep)]">
+                    {formatPrice(3500)}
+                  </p>
+                </button>
 
-          {/* Section 2: Dispatch Method */}
-          <div className="rounded-[30px] border border-[color:var(--brand-border)] bg-[color:var(--brand-white)] p-6 sm:p-8 shadow-[0_12px_35px_rgba(91,64,50,0.03)] space-y-4">
-            <div className="flex items-center gap-3 border-b border-[color:var(--brand-border)]/60 pb-4">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[color:var(--brand-deep)] text-xs font-bold text-white">
-                2
+                <button
+                  type="button"
+                  aria-pressed={form.shippingMethod === "priority"}
+                  onClick={() => updateField("shippingMethod", "priority")}
+                  className={`rounded-2xl border-2 p-4 text-left transition ${
+                    form.shippingMethod === "priority"
+                      ? "border-[color:var(--brand-deep)] bg-[color:var(--brand-cream)]"
+                      : "border-[color:var(--brand-border)] hover:border-[color:var(--brand-primary)]"
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <Truck className="h-5 w-5 text-[color:var(--brand-primary)]" />
+                    {form.shippingMethod === "priority" && (
+                      <CheckCircle2 className="h-4 w-4" />
+                    )}
+                  </div>
+                  <p className="mt-3 font-bold text-[color:var(--brand-deep)]">
+                    Priority dispatch
+                  </p>
+                  <p className="mt-1 text-sm text-[color:var(--brand-charcoal)]/70">
+                    Faster processing
+                  </p>
+                  <p className="mt-3 font-bold text-[color:var(--brand-deep)]">
+                    {formatPrice(6500)}
+                  </p>
+                </button>
               </div>
-              <div>
-                <h2 className="text-xl font-bold tracking-tight text-[color:var(--brand-deep)]">
-                  Shipping & Dispatch
-                </h2>
-                <p className="text-xs text-[color:var(--brand-charcoal)]/65">
-                  Select your preferred shipping speed.
-                </p>
-              </div>
-            </div>
+            </section>
 
-            <div className="grid gap-3 sm:grid-cols-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setForm({ ...form, shippingMethod: "standard" })}
-                className={`p-4 rounded-2xl text-left border-2 transition ${
-                  form.shippingMethod === "standard"
-                    ? "border-[color:var(--brand-deep)] bg-[color:var(--brand-cream)]"
-                    : "border-[color:var(--brand-border)] bg-white hover:border-[color:var(--brand-primary)]"
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-sm text-[color:var(--brand-deep)]">Standard Dispatch</span>
-                  <span className="font-bold text-sm text-[color:var(--brand-deep)]">{formatPrice(3500)}</span>
+            {/* Payment method */}
+            <section className={sectionClass}>
+              <div className="mb-5 flex items-center gap-3">
+                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[color:var(--brand-deep)] text-sm font-bold text-white">
+                  3
+                </span>
+                <div>
+                  <h2 className="text-lg font-bold text-[color:var(--brand-deep)]">
+                    Payment method
+                  </h2>
+                  <p className="text-xs text-[color:var(--brand-charcoal)]/65">
+                    Choose how you would like to pay.
+                  </p>
                 </div>
-                <p className="mt-1 text-xs text-[color:var(--brand-charcoal)]/70">
-                  2–4 business days.
-                </p>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setForm({ ...form, shippingMethod: "priority" })}
-                className={`p-4 rounded-2xl text-left border-2 transition ${
-                  form.shippingMethod === "priority"
-                    ? "border-[color:var(--brand-deep)] bg-[color:var(--brand-cream)]"
-                    : "border-[color:var(--brand-border)] bg-white hover:border-[color:var(--brand-primary)]"
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-sm text-[color:var(--brand-deep)]">Priority Dispatch</span>
-                  <span className="font-bold text-sm text-[color:var(--brand-deep)]">{formatPrice(6500)}</span>
-                </div>
-                <p className="mt-1 text-xs text-[color:var(--brand-charcoal)]/70">
-                  Faster processing and shipping priority.
-                </p>
-              </button>
-            </div>
-          </div>
-
-          {/* Section 3: Payment Method Tabs */}
-          <div className="rounded-[30px] border border-[color:var(--brand-border)] bg-[color:var(--brand-white)] p-6 sm:p-8 shadow-[0_12px_35px_rgba(91,64,50,0.03)] space-y-6">
-            <div className="flex items-center gap-3 border-b border-[color:var(--brand-border)]/60 pb-4">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[color:var(--brand-deep)] text-xs font-bold text-white">
-                3
               </div>
-              <h2 className="text-xl font-bold tracking-tight text-[color:var(--brand-deep)]">
-                Payment Method
-              </h2>
-            </div>
 
-            {/* Tabs */}
-            <div className="grid gap-2 sm:grid-cols-3">
-              {[
-                { id: "paystack", label: "Card & Wallet", icon: CreditCard },
-                { id: "transfer", label: "Direct Bank Transfer", icon: ShieldCheck },
-                { id: "pod", label: "Pay on Delivery", icon: MapPin },
-              ].map((tab) => {
-                const Icon = tab.icon;
-                const isSelected = form.paymentMethod === tab.id;
-                return (
+              <div className="space-y-3">
+                {[
+                  {
+                    id: "card" as const,
+                    title: "Pay with Card",
+                    description:
+                      "Continue to the secure payment provider to pay by card.",
+                    Icon: CreditCard,
+                  },
+                  {
+                    id: "transfer" as const,
+                    title: "Bank Transfer",
+                    description:
+                      "Continue to the payment provider for supported transfer instructions.",
+                    Icon: Landmark,
+                  },
+                  {
+                    id: "pod" as const,
+                    title: "Pay on Delivery",
+                    description:
+                      "Submit your order and pay when it is delivered.",
+                    Icon: PackageCheck,
+                  },
+                ].map(({ id, title, description, Icon }) => (
                   <button
-                    key={tab.id}
                     type="button"
-                    onClick={() => setForm({ ...form, paymentMethod: tab.id })}
-                    className={`flex items-center justify-center gap-2 rounded-2xl p-3.5 text-xs font-bold transition border-2 ${
-                      isSelected
-                        ? "border-[color:var(--brand-deep)] bg-[color:var(--brand-deep)] text-white shadow-xs"
-                        : "border-[color:var(--brand-border)] bg-[color:var(--brand-cream)] text-[color:var(--brand-charcoal)] hover:bg-white"
+                    key={id}
+                    aria-pressed={form.paymentMethod === id}
+                    onClick={() => updateField("paymentMethod", id)}
+                    className={`flex w-full items-start gap-3 rounded-2xl border-2 p-4 text-left transition ${
+                      form.paymentMethod === id
+                        ? "border-[color:var(--brand-deep)] bg-[color:var(--brand-cream)]"
+                        : "border-[color:var(--brand-border)] hover:border-[color:var(--brand-primary)]"
                     }`}
                   >
-                    <Icon className="h-4 w-4" />
-                    <span>{tab.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Tab 1: Paystack */}
-            {form.paymentMethod === "paystack" && (
-              <div className="rounded-2xl border border-[color:var(--brand-border)] bg-[color:var(--brand-cream)]/70 p-5 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-wider text-[color:var(--brand-deep)]">
-                    Instant Gateway
-                  </span>
-                  <div className="flex items-center gap-1.5 text-[10px] font-semibold text-emerald-800 bg-emerald-100/70 px-2.5 py-0.5 rounded-full">
-                    <Lock className="h-3 w-3" />
-                    <span>256-Bit SSL Encrypted</span>
-                  </div>
-                </div>
-                <p className="text-xs text-[color:var(--brand-charcoal)]/80 leading-relaxed">
-                  Accepts major cards and supported wallet/transfer options with instant confirmation.
-                </p>
-                <div className="flex items-center gap-3 pt-1 text-xs text-[color:var(--brand-charcoal)]/70">
-                  <span className="font-semibold text-[color:var(--brand-deep)]">Supported:</span>
-                  <span className="rounded-md bg-white px-2 py-0.5 border border-[color:var(--brand-border)]">Mastercard</span>
-                  <span className="rounded-md bg-white px-2 py-0.5 border border-[color:var(--brand-border)]">Visa</span>
-                  <span className="rounded-md bg-white px-2 py-0.5 border border-[color:var(--brand-border)]">Verve</span>
-                  <span className="rounded-md bg-white px-2 py-0.5 border border-[color:var(--brand-border)]">USSD</span>
-                </div>
-              </div>
-            )}
-
-            {/* Tab 2: Bank Transfer */}
-            {form.paymentMethod === "transfer" && (
-              <div className="rounded-2xl border border-[color:var(--brand-primary)]/50 bg-[linear-gradient(135deg,_rgba(196,154,120,0.1),_rgba(253,249,244,1))] p-6 space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-wider text-[color:var(--brand-deep)]">
-                    Official Transfer Account
-                  </span>
-                  <span className="text-[10px] font-semibold rounded-full bg-[color:var(--brand-primary)]/20 px-2.5 py-0.5 text-[color:var(--brand-deep)]">
-                    Instant Reconciliation
-                  </span>
-                </div>
-
-                <div className="rounded-2xl bg-white p-4 border border-[color:var(--brand-border)] shadow-xs space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-[color:var(--brand-charcoal)]/70">Bank Name:</span>
-                    <span className="text-sm font-bold text-[color:var(--brand-deep)]">Wema Bank</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-[color:var(--brand-charcoal)]/70">Account Name:</span>
-                    <span className="text-sm font-bold text-[color:var(--brand-deep)]">
-                      STORE OPERATIONS LTD
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between pt-1 border-t border-[color:var(--brand-border)]/50">
-                    <span className="text-xs text-[color:var(--brand-charcoal)]/70">Account Number:</span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-base font-extrabold tracking-wider text-[color:var(--brand-deep)]">
-                        0249827182
+                    <Icon className="mt-0.5 h-5 w-5 shrink-0 text-[color:var(--brand-primary)]" />
+                    <span className="min-w-0 flex-1">
+                      <span className="block font-bold text-[color:var(--brand-deep)]">
+                        {title}
                       </span>
-                      <button
-                        type="button"
-                        onClick={copyAccountNumber}
-                        className="inline-flex items-center gap-1 rounded-full bg-[color:var(--brand-cream)] px-2.5 py-1 text-[11px] font-semibold text-[color:var(--brand-deep)] border border-[color:var(--brand-border)] hover:bg-[color:var(--brand-soft)]/50 transition"
-                      >
-                        {copiedBank ? <Check className="h-3 w-3 text-emerald-700" /> : <Copy className="h-3 w-3" />}
-                        <span>{copiedBank ? "Copied!" : "Copy"}</span>
-                      </button>
-                    </div>
+                      <span className="mt-1 block text-sm leading-5 text-[color:var(--brand-charcoal)]/70">
+                        {description}
+                      </span>
+                    </span>
+                    <span
+                      className={`mt-1 h-4 w-4 shrink-0 rounded-full border ${
+                        form.paymentMethod === id
+                          ? "border-[color:var(--brand-deep)] bg-[color:var(--brand-deep)] ring-2 ring-[color:var(--brand-deep)] ring-offset-2"
+                          : "border-gray-400"
+                      }`}
+                    />
+                  </button>
+                ))}
+              </div>
+
+              {form.paymentMethod !== "pod" && (
+                <div className="mt-4 flex items-start gap-3 rounded-xl bg-[color:var(--brand-cream)] p-4">
+                  <LockKeyhole className="mt-0.5 h-5 w-5 shrink-0 text-[color:var(--brand-primary)]" />
+                  <div>
+                    <p className="text-sm font-semibold text-[color:var(--brand-deep)]">
+                      Secure payment provider
+                    </p>
+                    <p className="mt-1 text-xs leading-5 text-[color:var(--brand-charcoal)]/70">
+                      Payment will continue through a hosted checkout supplied
+                      by the backend. Rebel Fashion does not collect your card
+                      details on this page.
+                    </p>
                   </div>
                 </div>
-
-                <p className="text-xs text-[color:var(--brand-charcoal)]/75">
-                  Send your transfer reference through support to complete verification.
-                </p>
-              </div>
-            )}
-
-            {/* Tab 3: Pay on Delivery */}
-            {form.paymentMethod === "pod" && (
-              <div className="rounded-2xl border border-[color:var(--brand-border)] bg-[color:var(--brand-cream)]/70 p-5 space-y-2">
-                <div className="flex items-center gap-2 font-bold text-sm text-[color:var(--brand-deep)]">
-                  <MapPin className="h-4 w-4 text-[color:var(--brand-primary)]" />
-                  <span>Available in select areas</span>
-                </div>
-                <p className="text-xs text-[color:var(--brand-charcoal)]/80 leading-relaxed">
-                  You can pay via card or transfer when the order arrives. Availability depends on destination.
-                </p>
-              </div>
-            )}
+              )}
+            </section>
           </div>
 
-          {/* Submit Button */}
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="flex w-full items-center justify-center gap-2 rounded-full bg-[color:var(--brand-primary)] py-4 text-sm font-bold uppercase tracking-wider text-[color:var(--brand-deep)] shadow-sm hover:bg-[color:var(--brand-secondary)] transition active:scale-[0.99] disabled:opacity-50"
-          >
-            <Lock className="h-4 w-4" />
-            <span>
-              {isSubmitting ? "Generating Order..." : `Review & Confirm Order • ${formatPrice(finalTotal)}`}
-            </span>
-          </button>
-        </form>
-
-        {/* Order Summary Column */}
-        <aside className="space-y-6">
-          <div className="rounded-[30px] border border-[color:var(--brand-border)] bg-[color:var(--brand-white)] p-6 shadow-[0_16px_35px_rgba(91,64,50,0.04)] space-y-6">
-            <h2 className="text-xl font-bold tracking-tight text-[color:var(--brand-deep)]">
-              Order Breakdown ({cart.reduce((t, i) => t + i.quantity, 0)})
+          {/* Order summary */}
+          <aside className={`${sectionClass} lg:sticky lg:top-6`}>
+            <h2 className="text-xl font-bold text-[color:var(--brand-deep)]">
+              Order summary
             </h2>
+            <p className="mt-1 text-sm text-[color:var(--brand-charcoal)]/65">
+              {cart.length} {cart.length === 1 ? "item" : "items"} in your bag
+            </p>
 
-            {/* Item List */}
-            <div className="space-y-3.5 max-h-72 overflow-y-auto pr-1">
+            <div className="mt-5 max-h-72 space-y-4 overflow-y-auto">
               {cart.map((item) => (
-                <div key={item.id} className="flex items-center justify-between gap-3 rounded-2xl bg-[color:var(--brand-cream)] p-3">
-                  <div className="flex items-center gap-3">
-                    <div className="relative h-14 w-12 shrink-0 overflow-hidden rounded-xl bg-[color:var(--brand-ivory)] border border-[color:var(--brand-border)]">
-                      <Image
-                        src={item.image}
-                        alt={item.name}
-                        fill
-                        sizes="50px"
-                        className="object-cover"
-                      />
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-[color:var(--brand-deep)] line-clamp-1">{item.name}</p>
-                      <p className="text-[11px] text-[color:var(--brand-charcoal)]/65">
-                        {item.color} • {item.size} • Qty {item.quantity}
-                      </p>
-                    </div>
+                <div
+                  key={item.id}
+                  className="flex gap-3 border-b border-[color:var(--brand-border)] pb-4"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-[color:var(--brand-deep)]">
+                      {item.name}
+                    </p>
+                    <p className="mt-1 text-xs text-[color:var(--brand-charcoal)]/65">
+                      {item.color ? `${item.color} · ` : ""}
+                      {item.size ? `${item.size} · ` : ""}
+                      Qty {item.quantity}
+                    </p>
                   </div>
-                  <span className="text-xs font-bold text-[color:var(--brand-deep)]">
+                  <p className="shrink-0 text-sm font-semibold text-[color:var(--brand-deep)]">
                     {formatPrice(item.price * item.quantity)}
-                  </span>
+                  </p>
                 </div>
               ))}
             </div>
 
-            {/* Price Calculations */}
-            <div className="space-y-3 border-t border-[color:var(--brand-border)] pt-4 text-xs text-[color:var(--brand-charcoal)]/80">
-              <div className="flex justify-between">
-                <span>Subtotal</span>
-                <span className="font-semibold text-[color:var(--brand-deep)]">{formatPrice(subtotal)}</span>
+            <div className="mt-5 space-y-3 text-sm">
+              <div className="flex justify-between gap-3">
+                <span className="text-[color:var(--brand-charcoal)]/70">
+                  Subtotal
+                </span>
+                <span className="font-medium">{formatPrice(subtotal)}</span>
               </div>
-
-              <div className="flex justify-between">
-                <span>Shipping</span>
-                <span className="font-semibold text-[color:var(--brand-deep)]">{formatPrice(shippingCost)}</span>
+              <div className="flex justify-between gap-3">
+                <span className="text-[color:var(--brand-charcoal)]/70">
+                  {form.shippingMethod === "priority"
+                    ? "Priority dispatch"
+                    : "Standard dispatch"}
+                </span>
+                <span className="font-medium">
+                  {formatPrice(shippingCost)}
+                </span>
               </div>
-
-              <div className="flex justify-between border-t border-[color:var(--brand-border)] pt-3 text-base font-extrabold text-[color:var(--brand-deep)]">
-                <span>Total Due</span>
-                <span>{formatPrice(finalTotal)}</span>
+              <div className="flex justify-between gap-3 border-t border-[color:var(--brand-border)] pt-4 text-base">
+                <span className="font-bold text-[color:var(--brand-deep)]">
+                  Total due
+                </span>
+                <span className="font-extrabold text-[color:var(--brand-deep)]">
+                  {formatPrice(finalTotal)}
+                </span>
               </div>
             </div>
 
-            <div className="rounded-2xl bg-[color:var(--brand-soft)]/30 p-3.5 text-[11px] text-[color:var(--brand-charcoal)]/75 space-y-1">
-              <p className="font-semibold text-[color:var(--brand-deep)]">Frontend-ready checkout flow</p>
-              <p>Shipping, payment, and order fields are structured for backend integration.</p>
-            </div>
-          </div>
-        </aside>
-      </div>
-    </div>
+            {submitError && (
+              <div
+                role="alert"
+                className="mt-5 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700"
+              >
+                {submitError}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-[color:var(--brand-deep)] px-5 py-4 text-sm font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isSubmitting ? (
+                "Please wait..."
+              ) : form.paymentMethod === "card" ? (
+                <>
+                  <CreditCard className="h-4 w-4" />
+                  Pay with Card
+                </>
+              ) : form.paymentMethod === "transfer" ? (
+                <>
+                  <Landmark className="h-4 w-4" />
+                  Continue to Bank Transfer
+                </>
+              ) : (
+                <>
+                  <PackageCheck className="h-4 w-4" />
+                  Place Order — Pay on Delivery
+                </>
+              )}
+            </button>
+
+            <p className="mt-3 flex items-center justify-center gap-2 text-center text-xs text-[color:var(--brand-charcoal)]/65">
+              <LockKeyhole className="h-3.5 w-3.5" />
+              Your information is used to process your order.
+            </p>
+
+            <p className="mt-4 text-center text-xs leading-5 text-[color:var(--brand-charcoal)]/60">
+              Payment and order confirmation require a successful response from
+              the backend.
+            </p>
+          </aside>
+        </div>
+      </form>
+    </main>
   );
 }

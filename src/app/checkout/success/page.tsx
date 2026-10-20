@@ -159,7 +159,12 @@ const total = order?.total ?? null;
               <ShieldCheck className="h-3.5 w-3.5 text-[color:var(--brand-primary)]" />
               Payment Details
             </span>
-            <p className="font-semibold text-sm text-[color:var(--brand-deep)]">{paymentMethodLabel}</p>
+            <p className="font-semibold text-sm text-[color:var(--brand-deep)]">
+  {paymentMethodLabel}
+</p>
+<p className="text-[color:var(--brand-charcoal)]/65">
+  Payment status: Awaiting verification
+</p>
             <p className="text-[color:var(--brand-charcoal)]/65">
               Order Total: <strong className="text-[color:var(--brand-deep)]">{formatPrice(total)}</strong>
             </p>

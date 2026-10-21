@@ -9,10 +9,13 @@ import {
   CreditCard,
   Landmark,
   LockKeyhole,
+  MapPin,
+  Navigation,
   PackageCheck,
   ShieldCheck,
   Truck,
   AlertCircle,
+  LoaderCircle,
 } from "lucide-react";
 
 import { useStore } from "@/components/store-provider";
@@ -29,6 +32,27 @@ const NIGERIAN_STATES = [
 
 type PaymentMethod = "card" | "transfer" | "pod";
 type ShippingMethod = "standard" | "priority";
+type Coordinates = { latitude: number; longitude: number };
+
+function matchNigerianState(value?: string): string {
+  if (!value) return "";
+
+  const normalized = value.trim().toLowerCase();
+
+  if (
+    normalized.includes("abuja") ||
+    normalized.includes("federal capital territory") ||
+    normalized === "fct"
+  ) {
+    return "Federal Capital Territory (FCT)";
+  }
+
+  return (
+    NIGERIAN_STATES.find(
+      (state) => state.toLowerCase() === normalized
+    ) ?? ""
+  );
+}
 
 export default function CheckoutPage() {
   const { cart, subtotal, clearCart } = useStore();
@@ -47,6 +71,11 @@ export default function CheckoutPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const [isLocating, setIsLocating] = useState(false);
+  const [locationMessage, setLocationMessage] = useState("");
+  const [locationMessageType, setLocationMessageType] =
+    useState<"success" | "error" | "info">("info");
+  const [coordinates, setCoordinates] = useState<Coordinates | null>(null);
 
   const shippingCost =
     subtotal === 0 ? 0 : form.shippingMethod === "priority" ? 6500 : 3500;
@@ -68,10 +97,148 @@ export default function CheckoutPage() {
           behavior: "smooth",
           block: "center",
         });
-
         field.focus({ preventScroll: true });
       }
     });
+  }
+
+  function getCurrentPosition(): Promise<GeolocationPosition> {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        reject(
+          new Error(
+            "Your browser does not support location access. Please enter your address manually."
+          )
+        );
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(resolve, reject, {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 60000,
+      });
+    });
+  }
+
+  async function useMyLocation() {
+    setIsLocating(true);
+    setLocationMessage("");
+    setSubmitError("");
+
+    try {
+      const position = await getCurrentPosition();
+      const latitude = position.coords.latitude;
+      const longitude = position.coords.longitude;
+
+      setCoordinates({ latitude, longitude });
+      setLocationMessageType("info");
+      setLocationMessage(
+        "Location found. Looking up a readable address…"
+      );
+
+      const query = new URLSearchParams({
+        format: "jsonv2",
+        lat: String(latitude),
+        lon: String(longitude),
+        zoom: "18",
+        addressdetails: "1",
+      });
+
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?${query.toString()}`,
+        { headers: { Accept: "application/json" } }
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          "GPS location found, but the address lookup failed. Please enter or correct your address below."
+        );
+      }
+
+      const result = await response.json();
+      const parts = result?.address ?? {};
+
+      const streetParts = [
+        parts.house_number,
+        parts.road || parts.pedestrian || parts.residential,
+      ].filter(Boolean);
+
+      const area =
+        parts.suburb ||
+        parts.neighbourhood ||
+        parts.quarter ||
+        parts.city_district ||
+        "";
+
+      const addressValue = [
+        streetParts.join(" "),
+        area && area !== parts.city ? area : "",
+      ]
+        .filter(Boolean)
+        .join(", ");
+
+      const cityValue =
+        parts.city ||
+        parts.town ||
+        parts.village ||
+        parts.municipality ||
+        parts.county ||
+        parts.state_district ||
+        "";
+
+      const stateValue = matchNigerianState(parts.state);
+
+      setForm((current) => ({
+        ...current,
+        address: addressValue || current.address,
+        city: cityValue || current.city,
+        state: stateValue || current.state,
+      }));
+
+      setErrors((current) => ({
+        ...current,
+        address: "",
+        city: "",
+        state: "",
+      }));
+
+      setLocationMessageType("success");
+      setLocationMessage(
+        addressValue || cityValue
+          ? "Location added. Please review and edit the address details before placing your order."
+          : "GPS location found, but no readable address was returned. Please enter your address manually."
+      );
+    } catch (error: unknown) {
+      let message =
+        "We couldn't retrieve your location. You can enter your address manually.";
+
+      if (
+        typeof error === "object" &&
+        error !== null &&
+        "code" in error
+      ) {
+        const code = (error as { code: number }).code;
+
+        if (code === 1) {
+          message =
+            "Location permission was denied. Allow it in your browser settings or enter your address manually.";
+        } else if (code === 2) {
+          message =
+            "Your location is unavailable right now. Please try again or enter your address manually.";
+        } else if (code === 3) {
+          message =
+            "Finding your location took too long. Please try again or enter your address manually.";
+        }
+      } else if (error instanceof Error) {
+        message = error.message;
+      }
+
+      setLocationMessageType("error");
+      setLocationMessage(message);
+    } finally {
+      setIsLocating(false);
+    }
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -131,21 +298,6 @@ export default function CheckoutPage() {
     setIsSubmitting(true);
 
     try {
-      /*
-       * BACKEND CONTRACT
-       *
-       * POST /api/checkout
-       *
-       * The backend must validate the cart, recalculate prices,
-       * and determine the actual payable amount.
-       *
-       * Card / transfer:
-       * { "checkoutUrl": "https://..." }
-       *
-       * Pay on delivery:
-       * { "orderId": "server-generated-reference" }
-       */
-
       const response = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -158,6 +310,7 @@ export default function CheckoutPage() {
             city: form.city.trim(),
             state: form.state,
           },
+          deliveryLocation: coordinates,
           items: cart,
           shippingMethod: form.shippingMethod,
           paymentMethod: form.paymentMethod,
@@ -178,12 +331,19 @@ export default function CheckoutPage() {
 
       if (!response.ok) {
         throw new Error(
-          data.error || "We couldn't process your request. Please try again."
+          data.error ||
+            "We couldn't process your request. Please try again."
         );
       }
 
-      if (form.paymentMethod === "card" || form.paymentMethod === "transfer") {
-        if (!data.checkoutUrl || !/^https:\/\//i.test(data.checkoutUrl)) {
+      if (
+        form.paymentMethod === "card" ||
+        form.paymentMethod === "transfer"
+      ) {
+        if (
+          !data.checkoutUrl ||
+          !/^https:\/\//i.test(data.checkoutUrl)
+        ) {
           throw new Error(
             "The payment service has not returned a valid checkout link. No payment has been confirmed."
           );
@@ -333,6 +493,80 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
+              <div className="mb-6 rounded-2xl border border-[color:var(--brand-border)] bg-[color:var(--brand-cream)] p-4 sm:p-5">
+                <div className="flex items-start gap-3">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[color:var(--brand-white)] text-[color:var(--brand-primary)]">
+                    <MapPin className="h-5 w-5" />
+                  </span>
+                  <div>
+                    <h3 className="font-bold text-[color:var(--brand-deep)]">
+                      Use your current location
+                    </h3>
+                    <p className="mt-1 text-sm leading-5 text-[color:var(--brand-charcoal)]/70">
+                      Let your browser find your location and fill in any address details it can identify. You can edit everything below.
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={useMyLocation}
+                  disabled={isLocating}
+                  className="mt-4 flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-[color:var(--brand-deep)] px-5 py-3 text-sm font-bold text-white transition hover:bg-[color:var(--brand-primary)] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isLocating ? (
+                    <>
+                      <LoaderCircle className="h-4 w-4 animate-spin" />
+                      Finding your location…
+                    </>
+                  ) : (
+                    <>
+                      <Navigation className="h-4 w-4" />
+                      Use My Location
+                    </>
+                  )}
+                </button>
+
+                {locationMessage && (
+                  <p
+                    role="status"
+                    aria-live="polite"
+                    className={`mt-3 flex items-start gap-2 text-xs leading-5 ${
+                      locationMessageType === "error"
+                        ? "text-red-700"
+                        : locationMessageType === "success"
+                          ? "text-green-700"
+                          : "text-[color:var(--brand-charcoal)]/75"
+                    }`}
+                  >
+                    {locationMessageType === "error" ? (
+                      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                    ) : (
+                      <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
+                    )}
+                    <span>{locationMessage}</span>
+                  </p>
+                )}
+
+                <p className="mt-3 text-xs leading-5 text-[color:var(--brand-charcoal)]/60">
+                  Your browser will ask permission before sharing your location. If you prefer, skip this and enter your delivery address manually.
+                </p>
+              </div>
+
+              <div className="mb-4 flex items-center gap-3">
+                <div className="h-px flex-1 bg-[color:var(--brand-border)]" />
+                <span className="text-xs font-semibold uppercase tracking-wider text-[color:var(--brand-charcoal)]/55">
+                  Delivery address · editable
+                </span>
+                <div className="h-px flex-1 bg-[color:var(--brand-border)]" />
+              </div>
+
+              {coordinates && (
+                <p className="mb-4 rounded-xl border border-[color:var(--brand-border)] p-3 text-xs leading-5 text-[color:var(--brand-charcoal)]/70">
+                  GPS coordinates captured. Review the address fields below and correct any details that are not accurate.
+                </p>
+              )}
+
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="block sm:col-span-2">
                   <span className="text-sm font-semibold text-[color:var(--brand-deep)]">
@@ -375,9 +609,7 @@ export default function CheckoutPage() {
                   </span>
                   <div
                     className={`mt-2 flex items-center rounded-xl border bg-[color:var(--brand-cream)] focus-within:border-[color:var(--brand-primary)] ${
-                      errors.phone
-                        ? "border-red-500"
-                        : "border-[color:var(--brand-border)]"
+                      errors.phone ? "border-red-500" : "border-[color:var(--brand-border)]"
                     }`}
                   >
                     <span className="border-r border-[color:var(--brand-border)] px-3 py-3 text-sm font-semibold text-[color:var(--brand-deep)]">
@@ -409,7 +641,7 @@ export default function CheckoutPage() {
                     autoComplete="street-address"
                     value={form.address}
                     onChange={(e) => updateField("address", e.target.value)}
-                    placeholder="House number, street and area"
+                    placeholder="House number, street, area or nearby landmark"
                     className={inputClass}
                   />
                   {renderError("address")}
@@ -447,9 +679,7 @@ export default function CheckoutPage() {
                     <option value="">Select state</option>
                     {NIGERIAN_STATES.map((state) => (
                       <option key={state} value={state}>
-                        {state === "Federal Capital Territory (FCT)"
-                          ? "Abuja (FCT)"
-                          : state}
+                        {state === "Federal Capital Territory (FCT)" ? "Abuja (FCT)" : state}
                       </option>
                     ))}
                   </select>

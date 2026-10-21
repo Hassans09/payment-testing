@@ -104,20 +104,57 @@ export default function CheckoutPage() {
 
   function getCurrentPosition(): Promise<GeolocationPosition> {
   return new Promise((resolve, reject) => {
-    if (!navigator.geolocation) {
+    if (!("geolocation" in navigator)) {
       reject(
         new Error(
-          "Your browser does not support location access. Please enter your address manually."
+          "Location is not supported by this browser. Please enter your address manually."
         )
       );
       return;
     }
 
-    navigator.geolocation.getCurrentPosition(resolve, reject, {
-      enableHighAccuracy: false,
-      timeout: 30000,
-      maximumAge: 120000,
-    });
+    navigator.geolocation.getCurrentPosition(
+      resolve,
+      (error) => {
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            reject(
+              new Error(
+                "Location permission was denied. Allow location access in your browser settings or enter your address manually."
+              )
+            );
+            break;
+
+          case error.POSITION_UNAVAILABLE:
+            reject(
+              new Error(
+                "Your phone could not determine its location. Turn on Location and try again."
+              )
+            );
+            break;
+
+          case error.TIMEOUT:
+            reject(
+              new Error(
+                "Finding your location took too long. Try again in an area with a clearer GPS signal, or enter your address manually."
+              )
+            );
+            break;
+
+          default:
+            reject(
+              new Error(
+                "We couldn't get your location. Please enter your address manually."
+              )
+            );
+        }
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 60000,
+        maximumAge: 0,
+      }
+    );
   });
 }
 

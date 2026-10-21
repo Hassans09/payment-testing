@@ -103,23 +103,23 @@ export default function CheckoutPage() {
   }
 
   function getCurrentPosition(): Promise<GeolocationPosition> {
-    return new Promise((resolve, reject) => {
-      if (!navigator.geolocation) {
-        reject(
-          new Error(
-            "Your browser does not support location access. Please enter your address manually."
-          )
-        );
-        return;
-      }
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(
+        new Error(
+          "Your browser does not support location access. Please enter your address manually."
+        )
+      );
+      return;
+    }
 
-      navigator.geolocation.getCurrentPosition(resolve, reject, {
-        enableHighAccuracy: true,
-        timeout: 15000,
-        maximumAge: 60000,
-      });
+    navigator.geolocation.getCurrentPosition(resolve, reject, {
+      enableHighAccuracy: false,
+      timeout: 30000,
+      maximumAge: 120000,
     });
-  }
+  });
+}
 
   async function useMyLocation() {
     setIsLocating(true);

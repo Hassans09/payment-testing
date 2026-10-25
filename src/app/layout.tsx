@@ -9,8 +9,8 @@ import RouteTransitions from "@/components/route-transitions";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Curated Storefront | Fashion & Gifting",
-  description: "A polished storefront experience for curated fashion and gifting collections.",
+  title: "Rebel Fashion | Shop Fashion Online",
+  description: "Discover and shop stylish clothing and fashion essentials at Rebel Fashion. Explore collections, find your style, and shop with ease.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

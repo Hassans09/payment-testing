@@ -30,7 +30,7 @@ const NIGERIAN_STATES = [
   "Oyo", "Plateau", "Rivers", "Sokoto", "Taraba", "Yobe", "Zamfara",
 ];
 
-type PaymentMethod = "card" | "transfer" | "pod";
+type PaymentMethod = "card" | "transfer";
 type ShippingMethod = "standard" | "priority";
 type Coordinates = { latitude: number; longitude: number };
 
@@ -55,7 +55,7 @@ function matchNigerianState(value?: string): string {
 }
 
 export default function CheckoutPage() {
-  const { cart, subtotal, clearCart } = useStore();
+  const { cart, subtotal } = useStore();
 
   const [form, setForm] = useState({
     fullName: "",
@@ -103,60 +103,60 @@ export default function CheckoutPage() {
   }
 
   function getCurrentPosition(): Promise<GeolocationPosition> {
-  return new Promise((resolve, reject) => {
-    if (!("geolocation" in navigator)) {
-      reject(
-        new Error(
-          "Location is not supported by this browser. Please enter your address manually."
-        )
-      );
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      resolve,
-      (error) => {
-        switch (error.code) {
-          case error.PERMISSION_DENIED:
-            reject(
-              new Error(
-                "Location permission was denied. Allow location access in your browser settings or enter your address manually."
-              )
-            );
-            break;
-
-          case error.POSITION_UNAVAILABLE:
-            reject(
-              new Error(
-                "Your phone could not determine its location. Turn on Location and try again."
-              )
-            );
-            break;
-
-          case error.TIMEOUT:
-            reject(
-              new Error(
-                "Finding your location took too long. Try again in an area with a clearer GPS signal, or enter your address manually."
-              )
-            );
-            break;
-
-          default:
-            reject(
-              new Error(
-                "We couldn't get your location. Please enter your address manually."
-              )
-            );
-        }
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 60000,
-        maximumAge: 0,
+    return new Promise((resolve, reject) => {
+      if (!("geolocation" in navigator)) {
+        reject(
+          new Error(
+            "Location is not supported by this browser. Please enter your address manually."
+          )
+        );
+        return;
       }
-    );
-  });
-}
+
+      navigator.geolocation.getCurrentPosition(
+        resolve,
+        (error) => {
+          switch (error.code) {
+            case error.PERMISSION_DENIED:
+              reject(
+                new Error(
+                  "Location permission was denied. Allow location access in your browser settings or enter your address manually."
+                )
+              );
+              break;
+
+            case error.POSITION_UNAVAILABLE:
+              reject(
+                new Error(
+                  "Your phone could not determine its location. Turn on Location and try again."
+                )
+              );
+              break;
+
+            case error.TIMEOUT:
+              reject(
+                new Error(
+                  "Finding your location took too long. Please try again or enter your address manually."
+                )
+              );
+              break;
+
+            default:
+              reject(
+                new Error(
+                  "We couldn't get your location. Please enter your address manually."
+                )
+              );
+          }
+        },
+        {
+          enableHighAccuracy: false,
+          timeout: 60000,
+          maximumAge: 120000,
+        }
+      );
+    });
+  }
 
   async function useMyLocation() {
     setIsLocating(true);
@@ -243,33 +243,14 @@ export default function CheckoutPage() {
       setLocationMessageType("success");
       setLocationMessage(
         addressValue || cityValue
-          ? "Location added. Please review and edit the address details before placing your order."
+          ? "Location added. Please review and edit the address details before continuing."
           : "GPS location found, but no readable address was returned. Please enter your address manually."
       );
     } catch (error: unknown) {
-      let message =
-        "We couldn't retrieve your location. You can enter your address manually.";
-
-      if (
-        typeof error === "object" &&
-        error !== null &&
-        "code" in error
-      ) {
-        const code = (error as { code: number }).code;
-
-        if (code === 1) {
-          message =
-            "Location permission was denied. Allow it in your browser settings or enter your address manually.";
-        } else if (code === 2) {
-          message =
-            "Your location is unavailable right now. Please try again or enter your address manually.";
-        } else if (code === 3) {
-          message =
-            "Finding your location took too long. Please try again or enter your address manually.";
-        }
-      } else if (error instanceof Error) {
-        message = error.message;
-      }
+      const message =
+        error instanceof Error
+          ? error.message
+          : "We couldn't retrieve your location. You can enter your address manually.";
 
       setLocationMessageType("error");
       setLocationMessage(message);
@@ -360,10 +341,6 @@ export default function CheckoutPage() {
       const data: {
         error?: string;
         checkoutUrl?: string;
-        orderId?: string;
-        total?: number;
-        subtotal?: number;
-        shippingCost?: number;
       } = await response.json().catch(() => ({}));
 
       if (!response.ok) {
@@ -374,53 +351,15 @@ export default function CheckoutPage() {
       }
 
       if (
-        form.paymentMethod === "card" ||
-        form.paymentMethod === "transfer"
+        !data.checkoutUrl ||
+        !/^https:\/\//i.test(data.checkoutUrl)
       ) {
-        if (
-          !data.checkoutUrl ||
-          !/^https:\/\//i.test(data.checkoutUrl)
-        ) {
-          throw new Error(
-            "The payment service has not returned a valid checkout link. No payment has been confirmed."
-          );
-        }
-
-        window.location.assign(data.checkoutUrl);
-        return;
-      }
-
-      if (!data.orderId) {
         throw new Error(
-          "The server did not return an order reference. Please contact support before trying again."
+          "The payment service has not returned a valid checkout link. No payment has been confirmed."
         );
       }
 
-      const orderSnapshot = {
-        orderId: data.orderId,
-        customerName: form.fullName.trim(),
-        email: form.email.trim(),
-        phone: form.phone.trim(),
-        address: `${form.address.trim()}, ${form.city.trim()}, ${form.state}`,
-        paymentMethod: "pod",
-        total: data.total ?? finalTotal,
-        subtotal: data.subtotal ?? subtotal,
-        shippingCost: data.shippingCost ?? shippingCost,
-        items: cart,
-        date: new Date().toLocaleDateString("en-NG", {
-          day: "numeric",
-          month: "short",
-          year: "numeric",
-        }),
-      };
-
-      sessionStorage.setItem(
-        "last_store_order",
-        JSON.stringify(orderSnapshot)
-      );
-
-      clearCart();
-      window.location.assign("/checkout/success");
+      window.location.assign(data.checkoutUrl);
     } catch (error) {
       setSubmitError(
         error instanceof Error
@@ -489,7 +428,7 @@ export default function CheckoutPage() {
             Complete your order
           </h1>
           <p className="mt-2 text-sm text-[color:var(--brand-charcoal)]/70">
-            A few details, then choose how you want to pay.
+            Enter your delivery details, then choose how you want to pay.
           </p>
         </div>
 
@@ -646,7 +585,9 @@ export default function CheckoutPage() {
                   </span>
                   <div
                     className={`mt-2 flex items-center rounded-xl border bg-[color:var(--brand-cream)] focus-within:border-[color:var(--brand-primary)] ${
-                      errors.phone ? "border-red-500" : "border-[color:var(--brand-border)]"
+                      errors.phone
+                        ? "border-red-500"
+                        : "border-[color:var(--brand-border)]"
                     }`}
                   >
                     <span className="border-r border-[color:var(--brand-border)] px-3 py-3 text-sm font-semibold text-[color:var(--brand-deep)]">
@@ -716,7 +657,9 @@ export default function CheckoutPage() {
                     <option value="">Select state</option>
                     {NIGERIAN_STATES.map((state) => (
                       <option key={state} value={state}>
-                        {state === "Federal Capital Territory (FCT)" ? "Abuja (FCT)" : state}
+                        {state === "Federal Capital Territory (FCT)"
+                          ? "Abuja (FCT)"
+                          : state}
                       </option>
                     ))}
                   </select>
@@ -806,20 +749,16 @@ export default function CheckoutPage() {
                   {
                     id: "card" as const,
                     title: "Pay with Card",
-                    description: "Continue to the secure payment provider to pay by card.",
+                    description:
+                      "Continue to the secure payment provider to pay by card.",
                     Icon: CreditCard,
                   },
                   {
                     id: "transfer" as const,
                     title: "Bank Transfer",
-                    description: "Continue to the payment provider for supported transfer instructions.",
+                    description:
+                      "Continue to the payment provider for supported transfer instructions.",
                     Icon: Landmark,
-                  },
-                  {
-                    id: "pod" as const,
-                    title: "Pay on Delivery",
-                    description: "Submit your order and pay when it is delivered.",
-                    Icon: PackageCheck,
                   },
                 ]).map(({ id, title, description, Icon }) => (
                   <button
@@ -859,7 +798,10 @@ export default function CheckoutPage() {
 
               <div className="mt-5 space-y-4">
                 {cart.map((item) => (
-                  <div key={item.id} className="flex items-start justify-between gap-3">
+                  <div
+                    key={item.id}
+                    className="flex items-start justify-between gap-3"
+                  >
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-[color:var(--brand-deep)]">
                         {item.name}
@@ -879,14 +821,18 @@ export default function CheckoutPage() {
 
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between gap-4">
-                  <span className="text-[color:var(--brand-charcoal)]/70">Subtotal</span>
+                  <span className="text-[color:var(--brand-charcoal)]/70">
+                    Subtotal
+                  </span>
                   <span className="font-semibold text-[color:var(--brand-deep)]">
                     {formatPrice(subtotal)}
                   </span>
                 </div>
                 <div className="flex justify-between gap-4">
                   <span className="text-[color:var(--brand-charcoal)]/70">
-                    {form.shippingMethod === "priority" ? "Priority shipping" : "Standard shipping"}
+                    {form.shippingMethod === "priority"
+                      ? "Priority shipping"
+                      : "Standard shipping"}
                   </span>
                   <span className="font-semibold text-[color:var(--brand-deep)]">
                     {formatPrice(shippingCost)}
@@ -897,7 +843,9 @@ export default function CheckoutPage() {
               <div className="my-5 border-t border-[color:var(--brand-border)]" />
 
               <div className="flex items-center justify-between gap-4">
-                <span className="font-bold text-[color:var(--brand-deep)]">Total</span>
+                <span className="font-bold text-[color:var(--brand-deep)]">
+                  Total
+                </span>
                 <span className="text-xl font-extrabold text-[color:var(--brand-deep)]">
                   {formatPrice(finalTotal)}
                 </span>
@@ -913,7 +861,7 @@ export default function CheckoutPage() {
                 ) : (
                   <>
                     <LockKeyhole className="h-4 w-4" />
-                    Submit Order · {formatPrice(finalTotal)}
+                    Continue to Payment · {formatPrice(finalTotal)}
                   </>
                 )}
               </button>

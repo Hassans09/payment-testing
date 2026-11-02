@@ -1,7 +1,7 @@
 /**
  * Common Nigerian banks for the seller signup form (display names only).
- * The real backend should resolve the Paystack bank code from GET https://api.paystack.co/bank
- * and verify the account with GET /bank/resolve before creating a subaccount.
+ * The real backend should map the name to a bank code and verify the account (account-name
+ * lookup) with its payout provider before the seller's first payout.
  */
 export const NIGERIAN_BANKS = [
   "Access Bank",

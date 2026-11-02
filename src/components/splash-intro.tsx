@@ -100,7 +100,7 @@ export function SplashIntro() {
         </div>
       </div>
 
-      <p className="rf-splash-footer">Agbada · Senator · Jalabiya · Abaya · Moroccan</p>
+      <p className="rf-splash-footer">Clothing · Shoes · Bags · Accessories</p>
 
       <button
         type="button"

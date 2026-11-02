@@ -1,16 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PLATFORM_SELLER_ID, SHIPPING_RATES } from "@/lib/config";
+import { PLATFORM_SELLER_ID, SHIPPING_RATES, SITE_NAME } from "@/lib/config";
 import { splitLine } from "@/lib/commission";
 import { findSeedProduct } from "@/lib/seed-data";
 
 /**
- * MOCK payment route (only active when MOCK_PAYMENTS=true).
+ * MOCK checkout-init route (only active when MOCK_PAYMENTS=true). Used by src/lib/api/mock.ts.
  *
- * Validates the bag, re-checks prices, works out the seller/platform split and
- * returns a fake "payment page" URL (the success page). In production this is
- * replaced by the backend's POST /orders, which initialises a Paystack
- * transaction with split payments and returns Paystack's authorization_url.
- * See BACKEND.md.
+ * Validates the bag, re-checks prices, works out the seller/platform split and returns the
+ * same shape as the real backend's POST /orders:
+ *   { orderId, ref, amount, currency: "NGN", publicKey, narration, ...breakdown }
+ * The browser then opens the Fairsure inline checkout with `publicKey` (sandbox when it is a
+ * TEST_ key) or, when no public key is configured, completes a demo payment.
+ * In production the backend's own route (see BACKEND.md, "Payments with Fairsure") replaces this.
+ * It never touches FAIRSURE_PRIVATE_KEY.
  */
 
 function generateOrderReference(): string {
@@ -147,13 +149,17 @@ export async function POST(request: NextRequest) {
   }
 
   const orderRef = generateOrderReference();
-  const origin = request.nextUrl.origin;
-  const checkoutUrl = `${origin}/checkout/success?ref=${orderRef}`;
+  const publicKey = (process.env.NEXT_PUBLIC_FAIRSURE_PUBLIC_KEY ?? "").trim();
 
   return NextResponse.json(
     {
-      checkoutUrl,
-      reference: orderRef,
+      orderId: `ord_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
+      ref: orderRef,
+      amount: serverTotal,
+      currency: "NGN",
+      // Only a PUBLIC key (TEST_/LIVE_) is ever returned. null -> the frontend runs the demo payment.
+      publicKey: /^(TEST|LIVE)_/.test(publicKey) ? publicKey : null,
+      narration: `${SITE_NAME} order ${orderRef}`,
       subtotal: serverSubtotal,
       shippingCost,
       total: serverTotal,

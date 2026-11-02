@@ -83,7 +83,7 @@ export default function SellerSignupPage() {
         <span className="eyebrow">Sell on {SITE_NAME}</span>
         <h1 className="font-display mt-3 text-4xl text-[color:var(--brand-deep)] sm:text-5xl">Open your store</h1>
         <p className="mx-auto mt-3 max-w-lg text-sm text-[color:var(--brand-charcoal)]/70">
-          Free to join. We keep {PLATFORM_COMMISSION_PERCENT}% of each sale and your share is paid to the bank account below.
+          Sell any clothing, shoes, bags or accessories. Free to join: we keep {PLATFORM_COMMISSION_PERCENT}% of each sale and pay your share to the bank account below.
         </p>
       </div>
 
@@ -129,7 +129,7 @@ export default function SellerSignupPage() {
             <Landmark className="h-4 w-4 text-[color:var(--brand-primary)]" /> Payout bank account
           </h2>
           <p className="mb-5 text-xs text-[color:var(--brand-charcoal)]/65">
-            Used to set up your Paystack payout account, so customers&apos; payments are split and your share lands here directly.
+            Where we pay your share ({100 - PLATFORM_COMMISSION_PERCENT}% of each sale). We verify the account before your first payout.
           </p>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Bank" htmlFor="bankName" error={errors.bankName}>

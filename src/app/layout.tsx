@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Playfair_Display } from "next/font/google";
 
 import { CartDrawer } from "@/components/cart-drawer";
@@ -7,7 +7,7 @@ import { Header } from "@/components/header";
 import { SplashIntro } from "@/components/splash-intro";
 import { SPLASH_SESSION_KEY } from "@/lib/splash";
 import { StoreProvider } from "@/components/store-provider";
-import RouteTransitions from "@/components/route-transitions";
+import { ScrollReveal } from "@/components/scroll-reveal";
 import { SITE_NAME, SITE_TAGLINE } from "@/lib/config";
 
 import "./globals.css";
@@ -19,9 +19,15 @@ const playfair = Playfair_Display({
   style: ["normal", "italic"],
 });
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#fdf9f4",
+};
+
 export const metadata: Metadata = {
-  title: `${SITE_NAME} | ${SITE_TAGLINE}`,
-  description: `Discover and shop stylish clothing and fashion essentials at ${SITE_NAME}, from our own collection and approved independent sellers. Now in: kaftans.`,
+  title: { default: `${SITE_NAME} | ${SITE_TAGLINE}`, template: `%s | ${SITE_NAME}` },
+  description: `Shop clothing, shoes, bags and accessories at ${SITE_NAME}: our own collection plus approved independent fashion sellers across Nigeria.`,
 };
 
 // Runs before first paint: on the homepage, covers the page until the intro
@@ -41,9 +47,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <SplashIntro />
           <Header />
           <CartDrawer />
-          <main>
-            <RouteTransitions>{children}</RouteTransitions>
-          </main>
+          <main id="main-content">{children}</main>
+          <ScrollReveal />
           <Footer />
         </StoreProvider>
       </body>

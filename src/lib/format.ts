@@ -1,3 +1,4 @@
+import { categoryName } from "@/lib/config";
 export function formatPrice(value: number): string {
   return (
     "₦" +
@@ -36,4 +37,9 @@ export function maskAccountNumber(value: string): string {
 /** "Long · White · M" — the options a shopper chose for a bag/order line. */
 export function formatLineOptions(line: { type?: string; color?: string; size?: string }): string {
   return [line.type, line.color, line.size].filter((value) => value && value.trim()).join(" · ");
+}
+
+/** Short generic label for a product: the seller's optional type detail, else its category name. */
+export function productLabel(product: { category: string; productType?: string }): string {
+  return product.productType?.trim() || categoryName(product.category);
 }

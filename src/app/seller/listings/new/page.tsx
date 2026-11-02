@@ -10,7 +10,7 @@ import { SmartImage } from "@/components/smart-image";
 import { Card, ErrorNote, Field, inputClass, primaryButtonClass, secondaryButtonClass } from "@/components/ui/form";
 import { useSellerSession } from "@/hooks/use-session";
 import { createListing, uploadListingImage } from "@/lib/api";
-import { PLATFORM_COMMISSION_PERCENT } from "@/lib/config";
+import { CATEGORIES, PLATFORM_COMMISSION_PERCENT, isCategorySlug, type CategorySlug } from "@/lib/config";
 import { formatPrice } from "@/lib/format";
 import { moveItem } from "@/lib/image-utils";
 import type { ColorVariant, Gender } from "@/lib/types";
@@ -36,6 +36,7 @@ export default function NewListingPage() {
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [category, setCategory] = useState<CategorySlug | "">("");
   const [productType, setProductType] = useState("");
   const [gender, setGender] = useState<GenderChoice>("");
   const [material, setMaterial] = useState("");
@@ -118,7 +119,7 @@ export default function NewListingPage() {
     const cleanColors = colors.filter((color) => color.name.trim());
     if (images.length === 0) return setError("Please add at least one photo.");
     if (!name.trim()) return setError("Please add a title.");
-    if (!productType.trim()) return setError("Please enter the product type, e.g. Shirt, Dress, Kaftan, Shoes or Bag.");
+    if (!isCategorySlug(category)) return setError("Please choose a category.");
     if (description.trim().length < 20) return setError("Please write a description of at least 20 characters (fabric, fit, what's included).");
     if (sizes.length === 0) return setError("Add at least one size (type it and press Enter), e.g. M or One size.");
     if (cleanColors.length === 0) return setError("Add at least one colour with a name.");
@@ -130,7 +131,8 @@ export default function NewListingPage() {
       await createListing({
         name,
         description,
-        productType,
+        category,
+        ...(productType.trim() ? { productType: productType.trim() } : {}),
         ...(gender ? { gender } : {}),
         typeOption: optionValues.length > 1 ? { label: optionLabel.trim() || "Type", values: optionValues } : null,
         sizes,
@@ -162,7 +164,7 @@ export default function NewListingPage() {
       </Link>
       <h1 className="font-display mt-3 text-4xl text-[color:var(--brand-deep)] sm:text-5xl">New listing</h1>
       <p className="mt-2 text-sm text-[color:var(--brand-charcoal)]/70">
-        Any clothing or accessory. Listings are reviewed by our team before they appear in the shop as &ldquo;Sold by {seller.businessName}&rdquo;.
+        Any clothing, shoes, bags or accessories. Listings are reviewed by our team before they appear in the shop as &ldquo;Sold by {seller.businessName}&rdquo;.
       </p>
 
       <form onSubmit={onSubmit} noValidate className="mt-8 space-y-6">
@@ -269,14 +271,32 @@ export default function NewListingPage() {
             <Field label="Title" htmlFor="title" className="sm:col-span-2">
               <input id="title" className={inputClass} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Oversized Linen Shirt" maxLength={90} />
             </Field>
-            <Field label="Product type" htmlFor="product-type" hint="Type anything that describes it.">
+            <Field label="Category" htmlFor="category" hint="Where shoppers will find it.">
+              <select
+                id="category"
+                required
+                className={inputClass}
+                value={category}
+                onChange={(e) => setCategory(e.target.value as CategorySlug | "")}
+              >
+                <option value="" disabled>
+                  Choose a category…
+                </option>
+                {CATEGORIES.map((item) => (
+                  <option key={item.slug} value={item.slug}>
+                    {item.name}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Product type (optional)" htmlFor="product-type" hint="A more specific detail, e.g. Oversized shirt, Ankara tote.">
               <input
                 id="product-type"
                 list="product-type-suggestions"
                 className={inputClass}
                 value={productType}
                 onChange={(e) => setProductType(e.target.value)}
-                placeholder="Shirt, dress, kaftan, shoes, bag…"
+                placeholder="e.g. Oversized shirt, sneakers, tote bag"
                 maxLength={40}
               />
               <datalist id="product-type-suggestions">

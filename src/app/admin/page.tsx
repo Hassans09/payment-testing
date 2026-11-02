@@ -21,12 +21,19 @@ import {
   rejectListing,
   updateOrderStatus,
 } from "@/lib/api";
-import { PLATFORM_COMMISSION_PERCENT, PLATFORM_SELLER_ID, SITE_NAME } from "@/lib/config";
+import { PLATFORM_COMMISSION_PERCENT, PLATFORM_SELLER_ID, SITE_NAME, categoryName } from "@/lib/config";
 import { formatDate, formatLineOptions, formatPrice, maskAccountNumber } from "@/lib/format";
-import type { Order, OrderStatus, Product } from "@/lib/types";
+import type { Order, OrderStatus, PayoutStatus, Product } from "@/lib/types";
 
 type Tab = "overview" | "pending" | "products" | "sellers" | "orders";
 const ORDER_STATUSES: OrderStatus[] = ["pending", "paid", "shipped", "delivered", "cancelled"];
+
+const PAYOUT_LABELS: Record<PayoutStatus, string> = {
+  not_set_up: "Not set up (on first approval)",
+  pending: "Verifying bank account",
+  active: "Active",
+  on_hold: "On hold",
+};
 
 export default function AdminDashboardPage() {
   const router = useRouter();
@@ -87,7 +94,7 @@ export default function AdminDashboardPage() {
             key={item.value}
             type="button"
             onClick={() => setTab(item.value)}
-            className={`shrink-0 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wider transition ${
+            className={`min-h-10 shrink-0 rounded-full px-4 text-xs font-bold uppercase tracking-wider transition ${
               tab === item.value ? "bg-[color:var(--brand-deep)] text-white" : "text-[color:var(--brand-charcoal)]/75 hover:bg-[color:var(--brand-soft)]/50"
             }`}
           >
@@ -104,7 +111,7 @@ export default function AdminDashboardPage() {
                 <StatCard label="GMV" value={formatPrice(o.gmv)} hint="Order subtotals, excl. cancelled" />
                 <StatCard label={`Commission earned (${PLATFORM_COMMISSION_PERCENT}%)`} value={formatPrice(o.commissionEarned)} hint="From marketplace sellers" />
                 <StatCard label="Own-store revenue" value={formatPrice(o.ownStoreRevenue)} hint={`Sold by ${SITE_NAME}`} />
-                <StatCard label="Owed to sellers" value={formatPrice(o.sellerPayouts)} hint="Settled via Paystack split" />
+                <StatCard label="Owed to sellers" value={formatPrice(o.sellerPayouts)} hint={`Sellers' ${100 - PLATFORM_COMMISSION_PERCENT}% share, paid out by the platform`} />
                 <StatCard label="Orders" value={String(o.orderCount)} hint={`${o.ordersByStatus.paid} paid · ${o.ordersByStatus.shipped} shipped`} />
                 <StatCard label="Live products" value={String(o.productCounts.approved)} hint={`${o.productCounts.total} total`} />
                 <StatCard label="Pending review" value={String(o.productCounts.pending)} hint={`${o.productCounts.rejected} rejected`} />
@@ -134,43 +141,73 @@ export default function AdminDashboardPage() {
 
         {tab === "products" && (
           products.loading && !products.data ? <Spinner /> : (
-            <div className="overflow-x-auto rounded-2xl border border-[color:var(--brand-border)] bg-white">
-              <table className="w-full min-w-[720px] text-left text-sm">
-                <thead className="bg-[color:var(--brand-cream)] text-[10px] uppercase tracking-[0.18em] text-[color:var(--brand-charcoal)]/60">
-                  <tr>
-                    <th className="px-4 py-3">Product</th>
-                    <th className="px-4 py-3">Seller</th>
-                    <th className="px-4 py-3">Type</th>
-                    <th className="px-4 py-3">Price</th>
-                    <th className="px-4 py-3">Stock</th>
-                    <th className="px-4 py-3">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[color:var(--brand-border)]">
-                  {(products.data ?? []).map((product) => (
-                    <tr key={product.id}>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <div className="relative h-12 w-10 shrink-0 overflow-hidden rounded-lg bg-[color:var(--brand-ivory)]">
-                            <SmartImage src={product.images[0]} alt="" fill sizes="40px" className="object-cover object-top" />
-                          </div>
-                          {product.status === "approved" ? (
-                            <Link href={`/product/${product.slug}`} className="font-semibold text-[color:var(--brand-deep)] hover:underline">{product.name}</Link>
-                          ) : (
-                            <span className="font-semibold text-[color:var(--brand-deep)]">{product.name}</span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">{product.sellerId === PLATFORM_SELLER_ID ? <span className="text-[color:var(--brand-primary)] font-semibold">{SITE_NAME} (own)</span> : product.sellerName}</td>
-                      <td className="px-4 py-3">{product.productType}</td>
-                      <td className="px-4 py-3">{formatPrice(product.price)}</td>
-                      <td className="px-4 py-3">{product.stock}</td>
-                      <td className="px-4 py-3"><StatusBadge status={product.status} /></td>
+            <>
+              {/* Phones: one card per product */}
+              <ul className="space-y-3 md:hidden">
+                {(products.data ?? []).map((product) => (
+                  <li key={product.id} className="flex gap-3 rounded-2xl border border-[color:var(--brand-border)] bg-white p-3">
+                    <div className="relative h-20 w-16 shrink-0 overflow-hidden rounded-lg bg-[color:var(--brand-ivory)]">
+                      <SmartImage src={product.images[0]} alt="" fill sizes="64px" className="object-cover object-top" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-2">
+                        {product.status === "approved" ? (
+                          <Link href={`/product/${product.slug}`} className="line-clamp-2 text-sm font-semibold text-[color:var(--brand-deep)] hover:underline">{product.name}</Link>
+                        ) : (
+                          <span className="line-clamp-2 text-sm font-semibold text-[color:var(--brand-deep)]">{product.name}</span>
+                        )}
+                        <StatusBadge status={product.status} />
+                      </div>
+                      <p className="mt-1 truncate text-xs text-[color:var(--brand-charcoal)]/65">
+                        {product.sellerId === PLATFORM_SELLER_ID ? `${SITE_NAME} (own)` : product.sellerName} · {categoryName(product.category)}
+                      </p>
+                      <p className="mt-1 text-xs font-semibold text-[color:var(--brand-deep)]">
+                        {formatPrice(product.price)} <span className="font-normal text-[color:var(--brand-charcoal)]/60">· {product.stock} in stock</span>
+                      </p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+
+              {/* Tablet and up: table (scrolls sideways if needed) */}
+              <div className="hidden overflow-x-auto rounded-2xl border border-[color:var(--brand-border)] bg-white md:block">
+                <table className="w-full min-w-[720px] text-left text-sm">
+                  <thead className="bg-[color:var(--brand-cream)] text-[10px] uppercase tracking-[0.18em] text-[color:var(--brand-charcoal)]/60">
+                    <tr>
+                      <th className="px-4 py-3">Product</th>
+                      <th className="px-4 py-3">Seller</th>
+                      <th className="px-4 py-3">Category</th>
+                      <th className="px-4 py-3">Price</th>
+                      <th className="px-4 py-3">Stock</th>
+                      <th className="px-4 py-3">Status</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-[color:var(--brand-border)]">
+                    {(products.data ?? []).map((product) => (
+                      <tr key={product.id}>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            <div className="relative h-12 w-10 shrink-0 overflow-hidden rounded-lg bg-[color:var(--brand-ivory)]">
+                              <SmartImage src={product.images[0]} alt="" fill sizes="40px" className="object-cover object-top" />
+                            </div>
+                            {product.status === "approved" ? (
+                              <Link href={`/product/${product.slug}`} className="font-semibold text-[color:var(--brand-deep)] hover:underline">{product.name}</Link>
+                            ) : (
+                              <span className="font-semibold text-[color:var(--brand-deep)]">{product.name}</span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">{product.sellerId === PLATFORM_SELLER_ID ? <span className="font-semibold text-[color:var(--brand-primary)]">{SITE_NAME} (own)</span> : product.sellerName}</td>
+                        <td className="px-4 py-3">{categoryName(product.category)}{product.productType ? <span className="block text-xs text-[color:var(--brand-charcoal)]/55">{product.productType}</span> : null}</td>
+                        <td className="px-4 py-3">{formatPrice(product.price)}</td>
+                        <td className="px-4 py-3">{product.stock}</td>
+                        <td className="px-4 py-3"><StatusBadge status={product.status} /></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )
         )}
 
@@ -193,7 +230,7 @@ export default function AdminDashboardPage() {
                       <div><dt className="text-[color:var(--brand-charcoal)]/55">Phone</dt><dd className="font-semibold">{seller.phone}</dd></div>
                       <div><dt className="text-[color:var(--brand-charcoal)]/55">Bank</dt><dd className="font-semibold">{seller.bank.bankName} {maskAccountNumber(seller.bank.accountNumber)}</dd></div>
                       <div><dt className="text-[color:var(--brand-charcoal)]/55">Account name</dt><dd className="font-semibold">{seller.bank.accountName}</dd></div>
-                      <div><dt className="text-[color:var(--brand-charcoal)]/55">Paystack subaccount</dt><dd className="font-semibold">{seller.paystackSubaccountCode ?? "Created on first approval"}</dd></div>
+                      <div><dt className="text-[color:var(--brand-charcoal)]/55">Payouts</dt><dd className="font-semibold">{PAYOUT_LABELS[seller.payout?.status ?? "not_set_up"]}{seller.payout?.reference ? ` · ${seller.payout.reference}` : ""}</dd></div>
                       <div>
                         <dt className="text-[color:var(--brand-charcoal)]/55">Listings</dt>
                         <dd className="font-semibold">
@@ -258,7 +295,7 @@ function PendingListing({ product, onDone }: { product: Product; onDone: () => v
           {allImages.length > 1 && (
             <div className="mt-2 flex gap-2 overflow-x-auto">
               {allImages.map((src) => (
-                <button key={src.slice(-40)} type="button" onClick={() => setActiveImage(src)} className={`relative h-16 w-12 shrink-0 overflow-hidden rounded-lg border-2 ${activeImage === src ? "border-[color:var(--brand-deep)]" : "border-transparent"}`}>
+                <button key={src.slice(-40)} type="button" onClick={() => setActiveImage(src)} className={`relative h-16 w-12 min-w-11 shrink-0 overflow-hidden rounded-lg border-2 ${activeImage === src ? "border-[color:var(--brand-deep)]" : "border-transparent"}`}>
                   <SmartImage src={src} alt="" fill sizes="48px" className="object-cover object-top" />
                 </button>
               ))}
@@ -270,13 +307,13 @@ function PendingListing({ product, onDone }: { product: Product; onDone: () => v
             <StatusBadge status={product.status} />
             <span className="text-xs text-[color:var(--brand-charcoal)]/60">Submitted {formatDate(product.createdAt)}</span>
           </div>
-          <h3 className="font-display mt-2 text-3xl text-[color:var(--brand-deep)]">{product.name}</h3>
+          <h3 className="font-display mt-2 text-2xl text-[color:var(--brand-deep)] sm:text-3xl">{product.name}</h3>
           <p className="mt-1 text-sm">by <strong>{product.sellerName}</strong></p>
           <p className="mt-3 text-sm leading-relaxed text-[color:var(--brand-charcoal)]/80">{product.description}</p>
           <dl className="mt-4 grid grid-cols-[repeat(2,minmax(0,1fr))] gap-3 text-xs sm:grid-cols-4">
             <div><dt className="text-[color:var(--brand-charcoal)]/55">Price</dt><dd className="font-bold">{formatPrice(product.price)}</dd></div>
             <div><dt className="text-[color:var(--brand-charcoal)]/55">Stock</dt><dd className="font-bold">{product.stock}</dd></div>
-            <div><dt className="text-[color:var(--brand-charcoal)]/55">Product type</dt><dd className="font-bold">{product.productType}</dd></div>
+            <div><dt className="text-[color:var(--brand-charcoal)]/55">Category</dt><dd className="font-bold">{categoryName(product.category)}{product.productType ? ` · ${product.productType}` : ""}</dd></div>
             <div><dt className="text-[color:var(--brand-charcoal)]/55">Gender</dt><dd className="font-bold capitalize">{product.gender === "unisex" ? "Unisex / not set" : product.gender}</dd></div>
             {product.typeOption && product.typeOption.values.length > 0 && (
               <div className="col-span-2"><dt className="text-[color:var(--brand-charcoal)]/55">{product.typeOption.label} options</dt><dd className="font-bold">{product.typeOption.values.join(", ")}</dd></div>
@@ -302,7 +339,7 @@ function PendingListing({ product, onDone }: { product: Product; onDone: () => v
               <label htmlFor={`reason-${product.id}`} className="block text-xs font-semibold uppercase tracking-wider text-[color:var(--brand-deep)]">Reason (shown to the seller)</label>
               <textarea id={`reason-${product.id}`} rows={3} className={inputClass} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. Photos are blurry — please upload a clear front view." />
               <div className="flex flex-wrap gap-2">
-                <button type="button" disabled={busy || !reason.trim()} className="inline-flex items-center gap-2 rounded-full bg-red-600 px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-white disabled:opacity-50" onClick={() => run(() => rejectListing(product.id, reason))}>
+                <button type="button" disabled={busy || !reason.trim()} className="inline-flex min-h-11 items-center gap-2 rounded-full bg-red-600 px-5 text-xs font-bold uppercase tracking-wider text-white disabled:opacity-50" onClick={() => run(() => rejectListing(product.id, reason))}>
                   <X className="h-4 w-4" /> Confirm rejection
                 </button>
                 <button type="button" className={secondaryButtonClass} onClick={() => setRejecting(false)}>Cancel</button>
@@ -341,7 +378,7 @@ function OrderCard({ order, onChanged }: { order: Order; onChanged: () => void }
   return (
     <Card>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <button type="button" onClick={() => setOpen((v) => !v)} className="flex min-w-0 items-start gap-2 text-left">
+        <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} className="flex min-h-11 min-w-0 items-start gap-2 text-left">
           <ChevronDown className={`mt-1 h-4 w-4 shrink-0 transition ${open ? "rotate-180" : ""}`} />
           <span className="min-w-0">
             <span className="block text-sm font-bold text-[color:var(--brand-deep)]">{order.reference}</span>
@@ -350,7 +387,7 @@ function OrderCard({ order, onChanged }: { order: Order; onChanged: () => void }
             </span>
           </span>
         </button>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between gap-3 sm:justify-end">
           <span className="font-display text-xl text-[color:var(--brand-deep)]">{formatPrice(order.total)}</span>
           <label className="sr-only" htmlFor={`status-${order.id}`}>Order status</label>
           <select
@@ -358,14 +395,28 @@ function OrderCard({ order, onChanged }: { order: Order; onChanged: () => void }
             value={order.status}
             disabled={saving}
             onChange={(e) => changeStatus(e.target.value as OrderStatus)}
-            className="rounded-full border border-[color:var(--brand-border)] bg-[color:var(--brand-cream)] px-3 py-2 text-xs font-bold uppercase tracking-wider"
+            className="min-h-11 rounded-full border border-[color:var(--brand-border)] bg-[color:var(--brand-cream)] px-3 text-xs font-bold uppercase tracking-wider"
           >
             {ORDER_STATUSES.map((status) => <option key={status} value={status}>{status}</option>)}
           </select>
         </div>
       </div>
 
-      <div className="mt-4 overflow-x-auto">
+      {/* Phones: one small card per seller split */}
+      <ul className="mt-4 space-y-2 sm:hidden">
+        {order.sellerSplits.map((split) => (
+          <li key={split.sellerId} className="rounded-xl bg-[color:var(--brand-cream)] p-3 text-xs">
+            <p className="font-semibold text-[color:var(--brand-deep)]">{split.sellerId === PLATFORM_SELLER_ID ? `${SITE_NAME} (own stock)` : split.sellerName}</p>
+            <dl className="mt-2 grid grid-cols-[repeat(3,minmax(0,1fr))] gap-2">
+              <div><dt className="text-[color:var(--brand-charcoal)]/55">Gross</dt><dd className="font-semibold">{formatPrice(split.grossAmount)}</dd></div>
+              <div><dt className="text-[color:var(--brand-charcoal)]/55">Commission</dt><dd className="font-semibold">{formatPrice(split.commissionAmount)}</dd></div>
+              <div><dt className="text-[color:var(--brand-charcoal)]/55">Seller gets</dt><dd className="font-semibold text-emerald-700">{formatPrice(split.sellerAmount)}</dd></div>
+            </dl>
+          </li>
+        ))}
+      </ul>
+
+      <div className="mt-4 hidden overflow-x-auto sm:block">
         <table className="w-full min-w-[520px] text-left text-xs">
           <thead className="text-[10px] uppercase tracking-[0.18em] text-[color:var(--brand-charcoal)]/55">
             <tr>

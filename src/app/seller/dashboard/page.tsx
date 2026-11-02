@@ -50,10 +50,10 @@ export default function SellerDashboardPage() {
       <div className="flex flex-col gap-5 border-b border-[color:var(--brand-border)] pb-6 md:flex-row md:items-end md:justify-between">
         <div>
           <span className="eyebrow flex items-center gap-2"><Store className="h-3.5 w-3.5" /> Seller centre</span>
-          <h1 className="font-display mt-2 text-4xl text-[color:var(--brand-deep)] sm:text-5xl">{seller.businessName}</h1>
+          <h1 className="font-display mt-2 break-words text-4xl text-[color:var(--brand-deep)] sm:text-5xl">{seller.businessName}</h1>
           <p className="mt-1 text-sm text-[color:var(--brand-charcoal)]/70">
             {seller.ownerName} · Payouts to {seller.bank.bankName} {maskAccountNumber(seller.bank.accountNumber)}
-            {seller.paystackSubaccountCode ? " · Payouts active" : " · Payout account set up after your first approval"}
+            {seller.payout?.status === "active" ? " · Payouts active" : " · Payouts set up after your first approval"}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -78,16 +78,16 @@ export default function SellerDashboardPage() {
         <StatCard label="Orders" value={String(orders.data?.length ?? 0)} />
         <StatCard label="Gross sales" value={formatPrice(stats.gross)} />
         <StatCard label={`Commission (${PLATFORM_COMMISSION_PERCENT}%)`} value={formatPrice(stats.commission)} />
-        <StatCard label="Your earnings" value={formatPrice(stats.net)} hint="Paid to your bank via Paystack" />
+        <div className="col-span-2 lg:col-span-1"><StatCard label="Your earnings" value={formatPrice(stats.net)} hint="Paid out to your bank account" /></div>
       </div>
 
-      <div className="mt-8 flex gap-1 rounded-full border border-[color:var(--brand-border)] bg-white p-1 w-fit">
+      <div className="mt-8 flex w-full gap-1 overflow-x-auto rounded-full border border-[color:var(--brand-border)] bg-white p-1 scrollbar-none sm:w-fit">
         {(["listings", "orders"] as Tab[]).map((value) => (
           <button
             key={value}
             type="button"
             onClick={() => setTab(value)}
-            className={`rounded-full px-5 py-2 text-xs font-bold uppercase tracking-wider transition ${
+            className={`min-h-10 rounded-full px-4 text-xs font-bold uppercase tracking-wider transition sm:px-5 ${
               tab === value ? "bg-[color:var(--brand-deep)] text-white" : "text-[color:var(--brand-charcoal)]/75 hover:bg-[color:var(--brand-soft)]/50"
             }`}
           >

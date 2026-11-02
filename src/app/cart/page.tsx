@@ -175,7 +175,7 @@ export default function CartPage() {
           </div>
 
           <div className="rounded-2xl bg-[color:var(--brand-cream)] p-3.5 text-[11px] leading-relaxed text-[color:var(--brand-charcoal)]/70 space-y-1">
-            <p>🔒 <strong>Secure Checkout</strong> powered by Paystack.</p>
+            <p>🔒 <strong>Secure Checkout</strong> powered by Fairsure.</p>
             <p>📦 Shipping methods and timing are selected during checkout.</p>
           </div>
         </aside>

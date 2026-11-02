@@ -29,11 +29,13 @@ function day(index: number): string {
   return new Date(Date.UTC(2026, 9, 1, 9) + index * 3600_000).toISOString();
 }
 
-type CatalogueInput = Omit<Product, "slug" | "status" | "sellerId" | "sellerName">;
+type CatalogueInput = Omit<Product, "slug" | "status" | "sellerId" | "sellerName" | "category">;
 
 function product(input: CatalogueInput): Product {
   return {
     ...input,
+    // The house collection is kaftans for now; more categories will follow.
+    category: "kaftans",
     slug: input.id,
     sellerId: PLATFORM_SELLER_ID,
     sellerName: SITE_NAME,
@@ -1225,7 +1227,7 @@ export const seedProducts: Product[] = [
   }),
 ];
 
-/** Photos used by the homepage "Now in: Kaftans" feature. */
+/** Photos used by the homepage "Rebel Fashion's own collection: Kaftans" feature. */
 export const KAFTAN_FEATURE_IMAGES = {
   men: "/products/camel-linen-kaftan-set.webp",
   women: "/products/emerald-satin-abaya-kaftan.webp",

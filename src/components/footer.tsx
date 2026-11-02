@@ -3,11 +3,12 @@ import { Lock, ShieldCheck } from "lucide-react";
 import AnimatedLogo from "@/components/animated-logo";
 import { PLATFORM_COMMISSION_PERCENT, SITE_NAME } from "@/lib/config";
 const footerShopLinks = [
-  { href: "/shop", label: "Shop all" },
+  { href: "/shop", label: "All products" },
   { href: "/shop?gender=men", label: "Men" },
   { href: "/shop?gender=women", label: "Women" },
   { href: "/shop?gender=kids", label: "Kids" },
-  { href: "/#now-in-kaftans", label: "Now in: Kaftans" },
+  { href: "/shop?sold=marketplace", label: "From our sellers" },
+  { href: "/category/kaftans", label: `${SITE_NAME} kaftans` },
 ];
 
 export function Footer() {
@@ -17,7 +18,7 @@ export function Footer() {
         <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-[1.5fr_1.1fr_1fr_1fr]">
           {/* Brand Intro & Locations */}
           <div className="space-y-4">
-            <Link href="/" className="inline-block" aria-label="Store home">
+            <Link href="/" className="inline-flex min-h-11 items-center" aria-label="Store home">
               <AnimatedLogo className="min-w-[150px]" />
             </Link>
 
@@ -93,7 +94,7 @@ export function Footer() {
                 <span>Secure Payment Gateway</span>
               </div>
               <p className="text-[11px] text-[color:var(--brand-charcoal)]/70 leading-relaxed">
-                Payments are processed by Paystack. Sellers are paid directly to their bank accounts.
+                Payments are processed securely by Fairsure. Sellers are paid out to their own bank accounts.
               </p>
               <div className="flex flex-wrap gap-1.5 pt-1 text-[10px] font-semibold text-[color:var(--brand-deep)]">
                 <span className="rounded bg-white px-2 py-0.5 border border-[color:var(--brand-border)]">Mastercard</span>

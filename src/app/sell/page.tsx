@@ -9,8 +9,8 @@ import { formatPrice } from "@/lib/format";
 import { KAFTAN_FEATURE_IMAGES } from "@/lib/seed-data";
 
 export const metadata: Metadata = {
-  title: `Sell on ${SITE_NAME}`,
-  description: `Open a clothing store on ${SITE_NAME}. ${PLATFORM_COMMISSION_PERCENT}% commission, payouts straight to your bank account.`,
+  title: "Sell with us",
+  description: `Open a fashion store on ${SITE_NAME}: list clothing, shoes, bags and accessories. ${PLATFORM_COMMISSION_PERCENT}% commission, payouts straight to your bank account.`,
 };
 
 const EXAMPLE_PRICE = 100000;
@@ -20,13 +20,13 @@ const steps = [
   { icon: UserPlus, title: "Create your seller account", body: "Tell us your business name and the bank account you want to be paid into. It takes two minutes." },
   { icon: Camera, title: "List your pieces", body: "Upload photos, add colours, sizes, price and stock. Every listing is reviewed by our team." },
   { icon: BadgeCheck, title: "Go live", body: "Once approved, your products appear in the shop and on the homepage with \u201cSold by\u201d your store name." },
-  { icon: Banknote, title: "Get paid directly", body: "When a customer pays, your share goes straight to your bank account through Paystack." },
+  { icon: Banknote, title: "Get paid directly", body: `When a customer pays, we record your ${100 - PLATFORM_COMMISSION_PERCENT}% share and pay it out to your own bank account.` },
 ];
 
 const faqs = [
   { q: "How much does it cost?", a: `Opening a store is free. We take ${PLATFORM_COMMISSION_PERCENT}% of each item you sell — nothing else.` },
-  { q: "When do I get my money?", a: "Payments are split automatically by Paystack at checkout. Your share is settled to your own bank account on Paystack's normal settlement schedule." },
-  { q: "What can I sell?", a: "Any clothing or fashion accessory: shirts, dresses, trousers, kaftans, abayas, kids' wear, shoes, bags, caps and more. You choose the product type, sizes and colours." },
+  { q: "When do I get my money?", a: `Customers pay securely through Fairsure. We record your ${100 - PLATFORM_COMMISSION_PERCENT}% share on every order and pay it out to your own bank account after the order is confirmed.` },
+  { q: "What can I sell?", a: "Any clothing, shoes, bags or accessories: shirts, T-shirts, hoodies, jeans, dresses, native wear, kids' wear, sneakers, sandals, handbags, caps, jewellery and more. Pick the category, then add your sizes and colours." },
   { q: "Who handles delivery?", a: "You prepare and ship your orders. You'll see every order and the customer's delivery details in your seller dashboard." },
 ];
 
@@ -41,7 +41,7 @@ export default function SellPage() {
               Your fashion. <em className="text-[color:var(--brand-primary)]">Our runway.</em>
             </h1>
             <p className="mt-6 max-w-lg text-sm leading-relaxed text-[color:var(--brand-charcoal)]/80 sm:text-base">
-              Sell clothes and accessories on {SITE_NAME}. Reach shoppers nationwide, keep {100 - PLATFORM_COMMISSION_PERCENT}% of every sale and get paid straight to your own bank account.
+              Sell clothing, shoes, bags and accessories on {SITE_NAME}. Reach shoppers nationwide, keep {100 - PLATFORM_COMMISSION_PERCENT}% of every sale and get paid straight to your own bank account.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Link href="/seller/signup" className="inline-flex items-center justify-center gap-2 rounded-full bg-[color:var(--brand-deep)] px-8 py-3.5 text-xs font-bold uppercase tracking-wider text-white transition hover:bg-[color:var(--brand-chocolate)]">
@@ -53,7 +53,7 @@ export default function SellPage() {
             </div>
           </div>
           <div className="relative aspect-[4/5] overflow-hidden rounded-[32px] border border-[color:var(--brand-border)]">
-            <Image src={KAFTAN_FEATURE_IMAGES.women} alt="Emerald satin abaya kaftan on a mannequin" fill priority sizes="(max-width: 1024px) 100vw, 45vw" className="object-cover object-top" />
+            <Image src={KAFTAN_FEATURE_IMAGES.women} alt="A piece listed on the store" fill priority sizes="(max-width: 1024px) 100vw, 45vw" className="object-cover object-top" />
             <div className="absolute inset-x-4 bottom-4 rounded-2xl bg-white/92 p-4 shadow-lg backdrop-blur sm:inset-x-6 sm:bottom-6">
               <p className="flex items-center gap-2 text-xs font-semibold text-[color:var(--brand-deep)]">
                 <Store className="h-4 w-4 text-[color:var(--brand-primary)]" /> Sold by Your Store Name
@@ -91,12 +91,12 @@ export default function SellPage() {
             <span className="eyebrow">Simple, fair pricing</span>
             <h2 className="font-display mt-3 text-4xl text-white sm:text-6xl">{PLATFORM_COMMISSION_PERCENT}% commission.<br />That&apos;s it.</h2>
             <p className="mt-5 max-w-md text-sm leading-relaxed text-[color:var(--brand-soft)]/80">
-              No listing fees, no monthly subscription. We only earn when you do. Payouts go straight to your account — we never hold your money.
+              No listing fees, no monthly subscription. We only earn when you do, and your share is paid out to your own bank account.
             </p>
             <ul className="mt-8 space-y-3 text-sm">
               {[
-                { icon: Percent, text: `${PLATFORM_COMMISSION_PERCENT}% per item sold, taken automatically at checkout` },
-                { icon: Banknote, text: "Your share is paid to your own bank account via Paystack" },
+                { icon: Percent, text: `${PLATFORM_COMMISSION_PERCENT}% per item sold, worked out automatically on every order` },
+                { icon: Banknote, text: "Your share is paid out to your own bank account" },
                 { icon: ShieldCheck, text: "Secure card and bank transfer payments" },
                 { icon: Truck, text: "Order and delivery details in your dashboard" },
               ].map(({ icon: Icon, text }) => (
@@ -123,7 +123,7 @@ export default function SellPage() {
                 <dd className="font-display text-3xl text-[color:var(--brand-primary)]">{formatPrice(EXAMPLE_PRICE - exampleCommission)}</dd>
               </div>
             </dl>
-            <p className="mt-6 text-[11px] text-[color:var(--brand-soft)]/60">Delivery fees are charged to the customer separately. Paystack transaction fees apply as per Paystack&apos;s pricing.</p>
+            <p className="mt-6 text-[11px] text-[color:var(--brand-soft)]/60">Delivery fees are charged to the customer separately. Card and transfer payments are processed by Fairsure.</p>
           </div>
         </div>
       </section>

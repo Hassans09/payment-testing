@@ -5,8 +5,9 @@
  * a database client for domain data directly. Which implementation runs is
  * decided by NEXT_PUBLIC_API_MODE (see src/lib/config.ts and BACKEND.md):
  *   - mock.ts      -> demo store in the browser (default)
- *   - http.ts      -> REST backend at NEXT_PUBLIC_API_BASE_URL
- *   - supabase.ts  -> not written yet. To add it: create src/lib/api/supabase.ts
+ *   - http.ts      -> the backend's REST API at NEXT_PUBLIC_API_BASE_URL (primary: Next.js
+ *                     API routes in this app under /api/v1, with any database)
+ *   - supabase.ts  -> optional, not written. To add it: create src/lib/api/supabase.ts
  *                     exporting `supabaseApi: DataApi`, import it below and add
  *                     it to `implementations`. Nothing else changes.
  */
@@ -37,6 +38,7 @@ export { ApiError } from "./contract";
 export type { DataApi } from "./contract";
 
 export const getProducts: DataApi["getProducts"] = (...args) => api.getProducts(...args);
+export const getCategories: DataApi["getCategories"] = (...args) => api.getCategories(...args);
 export const getProduct: DataApi["getProduct"] = (...args) => api.getProduct(...args);
 
 export const createSeller: DataApi["createSeller"] = (...args) => api.createSeller(...args);
@@ -61,4 +63,7 @@ export const updateOrderStatus: DataApi["updateOrderStatus"] = (...args) => api.
 export const getAdminOverview: DataApi["getAdminOverview"] = (...args) => api.getAdminOverview(...args);
 
 export const createOrder: DataApi["createOrder"] = (...args) => api.createOrder(...args);
+/** Alias with the name used in BACKEND.md: starts checkout and returns the Fairsure init values. */
+export const initCheckout: DataApi["createOrder"] = (...args) => api.createOrder(...args);
+export const confirmPayment: DataApi["confirmPayment"] = (...args) => api.confirmPayment(...args);
 export const getOrderByReference: DataApi["getOrderByReference"] = (...args) => api.getOrderByReference(...args);

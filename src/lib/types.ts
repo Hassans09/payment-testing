@@ -4,6 +4,10 @@
  * All money values are whole Naira (NGN), not kobo.
  */
 
+import type { CategorySlug } from "@/lib/config";
+
+export type { CategorySlug };
+
 export type Gender = "men" | "women" | "kids" | "unisex";
 
 /** Listing moderation status. Only "approved" products are visible in the shop. */
@@ -37,7 +41,9 @@ export type Product = {
   slug: string;
   name: string;
   description: string;
-  /** Free-text product type entered by the seller, e.g. "Kaftan", "Shirt", "Dress", "Bag". Display only, not a category. */
+  /** One of the fixed categories in CATEGORIES (src/lib/config.ts), stored as its slug, e.g. "kaftans". */
+  category: CategorySlug;
+  /** Optional free-text detail entered by the seller, e.g. "Linen kaftan", "Oversized shirt". "" when not given. Display only. */
   productType: string;
   /** "unisex" also means "not specified". */
   gender: Gender;
@@ -69,6 +75,22 @@ export type BankDetails = {
   accountName: string;
 };
 
+/**
+ * - "not_set_up": bank details saved, nothing created with the payment provider yet.
+ * - "pending": the backend is verifying the bank account / creating the payout beneficiary.
+ * - "active": the seller can be paid.
+ * - "on_hold": payouts paused (e.g. a failed verification or a dispute).
+ */
+export type PayoutStatus = "not_set_up" | "pending" | "active" | "on_hold";
+
+export type SellerPayout = {
+  status: PayoutStatus;
+  /** Provider-side id of the payout beneficiary / split account, if any. Display only. */
+  reference: string | null;
+  /** Free text such as "Fairsure" or "WokPay". Display only. */
+  provider: string | null;
+};
+
 export type Seller = {
   id: string;
   businessName: string;
@@ -76,8 +98,11 @@ export type Seller = {
   email: string;
   phone: string;
   bank: BankDetails;
-  /** Paystack subaccount code (e.g. "ACCT_xxx"). Created by the backend, null until then. */
-  paystackSubaccountCode: string | null;
+  /**
+   * Payout set-up for this seller. Provider-neutral: the backend decides how sellers are paid
+   * (Fairsure split/sub-merchant once available, or a payout/transfer product such as WokPay).
+   */
+  payout: SellerPayout;
   status: "active" | "suspended";
   createdAt: string;
 };
@@ -106,8 +131,10 @@ export type AdminSession = {
 export type NewListingInput = {
   name: string;
   description: string;
-  /** Free text, e.g. "Shirt", "Dress", "Kaftan", "Shoes", "Bag". */
-  productType: string;
+  /** Required: one of the CATEGORIES slugs. */
+  category: CategorySlug;
+  /** Optional free-text detail, e.g. "Oversized shirt", "Ankara tote". */
+  productType?: string;
   /** Optional. Omitted or "unisex" = not specified. */
   gender?: Gender;
   /** Optional Type choice shoppers pick from, e.g. { label: "Length", values: ["Short", "Long"] }. */
@@ -122,6 +149,7 @@ export type NewListingInput = {
 
 export type ProductFilters = {
   gender?: Gender | "all";
+  category?: CategorySlug;
   search?: string;
   sellerId?: string;
   ids?: string[];
@@ -172,8 +200,11 @@ export type SellerSplit = {
   sellerAmount: number;
 };
 
+export type PaymentStatus = "unpaid" | "paid" | "failed";
+
 export type Order = {
   id: string;
+  /** Our unique order/payment reference. Sent to Fairsure as `ref` (Fairsure calls it merchant_reference). */
   reference: string;
   customer: Customer;
   items: OrderItem[];
@@ -185,6 +216,11 @@ export type Order = {
   shippingMethod: ShippingMethod;
   paymentMethod: PaymentMethod;
   status: OrderStatus;
+  /** Set by the backend after it verifies the payment with Fairsure. */
+  paymentStatus?: PaymentStatus;
+  /** Fairsure's own transaction reference (transaction_reference / transactionRef), once paid. */
+  paymentReference?: string | null;
+  paidAt?: string | null;
   createdAt: string;
   updatedAt?: string;
 };
@@ -216,10 +252,38 @@ export type CreateOrderInput = {
   displayedTotal: number;
 };
 
-export type CreateOrderResult = {
-  order: Order;
-  /** Where to send the shopper to pay (Paystack authorization_url in production). */
-  checkoutUrl: string;
+/**
+ * What the server returns when checkout starts (POST /orders). The browser then opens the
+ * Fairsure inline checkout with these values. Amounts are whole Naira.
+ */
+export type CheckoutInit = {
+  orderId: string;
+  /** Unique payment reference for this order, passed to Fairsure as `ref`. */
+  ref: string;
+  /** Amount to charge in Naira, computed by the server (never by the browser). */
+  amount: number;
+  currency: "NGN";
+  /**
+   * Fairsure PUBLIC key (TEST_… / LIVE_…). Optional: when null the frontend falls back to
+   * NEXT_PUBLIC_FAIRSURE_PUBLIC_KEY. Never the private key.
+   */
+  publicKey: string | null;
+  /** Shown in the Fairsure modal, e.g. "Rebel Fashion order RF-261029-AB12C". */
+  narration?: string;
+  /** The created order (optional; the success page fetches it again anyway). */
+  order?: Order;
+};
+
+/** @deprecated kept as an alias so older imports keep compiling. */
+export type CreateOrderResult = CheckoutInit;
+
+/** Result of asking the backend to verify a payment (POST /orders/:ref/confirm). */
+export type PaymentConfirmation = {
+  /** "paid" only when the server confirmed it with Fairsure (or the webhook already did). */
+  status: "paid" | "pending" | "failed";
+  order: Order | null;
+  /** Optional human-readable note shown on the success page. */
+  message?: string;
 };
 
 /** A seller's view of an order: only their own lines. */
@@ -237,6 +301,13 @@ export type SellerOrderView = {
   sellerAmount: number;
 };
 
+/** One category with how many APPROVED products it has (GET /categories). */
+export type CategorySummary = {
+  slug: CategorySlug;
+  name: string;
+  productCount: number;
+};
+
 export type AdminOverview = {
   productCounts: { approved: number; pending: number; rejected: number; total: number };
   sellerCount: number;
@@ -247,7 +318,7 @@ export type AdminOverview = {
   commissionEarned: number;
   /** Revenue from the platform's own products, excluding cancelled. */
   ownStoreRevenue: number;
-  /** Amount owed to / paid to sellers, excluding cancelled. */
+  /** Amount owed to / paid to sellers (their 90% share), excluding cancelled. */
   sellerPayouts: number;
   ordersByStatus: Record<OrderStatus, number>;
 };

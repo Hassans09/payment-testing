@@ -10,7 +10,7 @@ import { SmartImage } from "@/components/smart-image";
 import { useStore } from "@/components/store-provider";
 import { useAsync } from "@/hooks/use-async";
 import { getProducts } from "@/lib/api";
-import { PLATFORM_SELLER_ID } from "@/lib/config";
+import { PLATFORM_SELLER_ID, categoryName } from "@/lib/config";
 import { formatPrice } from "@/lib/format";
 import type { Product } from "@/lib/types";
 
@@ -130,7 +130,7 @@ export function ProductDetailView({ product }: { product: Product }) {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--brand-primary)]">
-                {product.productType} · {genderLabel}
+                {[categoryName(product.category), product.productType].filter(Boolean).join(" · ")} · {genderLabel}
               </span>
               <button
                 type="button"

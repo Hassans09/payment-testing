@@ -9,15 +9,24 @@
  * Nothing here is secure: passwords are only lightly hashed and every visitor has
  * their own copy of the data. Replace with the real backend (http.ts) for production.
  */
-import { ADMIN_DEMO_CREDENTIALS, MOCK_API_DELAY_MS, PLATFORM_SELLER_ID, SHIPPING_RATES } from "@/lib/config";
+import {
+  ADMIN_DEMO_CREDENTIALS,
+  MOCK_API_DELAY_MS,
+  PLATFORM_SELLER_ID,
+  SHIPPING_RATES,
+  categoryName,
+  isCategorySlug,
+} from "@/lib/config";
 import { readJSON, writeJSON } from "@/lib/client-storage";
 import { buildSellerSplits, splitLine } from "@/lib/commission";
+import { summarizeCategories } from "@/lib/categories";
 import { slugify } from "@/lib/format";
 import { compressImageToDataUrl, shrinkDataUrl } from "@/lib/image-compress";
 import { SEED_VERSION, seedProducts } from "@/lib/seed-data";
 import type {
   AdminOverview,
   AdminSession,
+  CheckoutInit,
   Order,
   OrderItem,
   OrderStatus,
@@ -63,13 +72,25 @@ function createSeedDb(): MockDb {
 
 let serverDb: MockDb | null = null;
 
+/** Upgrades demo data saved by older versions (sellers saved before the generic payout field existed). */
+function migrateDb(db: MockDb): MockDb {
+  for (const seller of db.sellers) {
+    seller.payout ??= { status: "not_set_up", reference: null, provider: null };
+  }
+  for (const product of db.products) {
+    // Products saved before categories existed: house items are kaftans, seller items "other".
+    if (!isCategorySlug(product.category)) product.category = product.sellerId === PLATFORM_SELLER_ID ? "kaftans" : "other";
+  }
+  return db;
+}
+
 function loadDb(): MockDb {
   if (typeof window === "undefined") {
     serverDb ??= createSeedDb();
     return serverDb;
   }
   const stored = readJSON<MockDb | null>(DB_KEY, null);
-  if (stored && stored.version === SEED_VERSION && Array.isArray(stored.products)) return stored;
+  if (stored && stored.version === SEED_VERSION && Array.isArray(stored.products)) return migrateDb(stored);
   const fresh = createSeedDb();
   writeJSON(DB_KEY, fresh);
   return fresh;
@@ -110,11 +131,12 @@ function matchesFilters(product: Product, filters: ProductFilters): boolean {
   if (filters.gender && filters.gender !== "all") {
     if (product.gender !== filters.gender && product.gender !== "unisex") return false;
   }
+  if (filters.category && product.category !== filters.category) return false;
   if (filters.sellerId && product.sellerId !== filters.sellerId) return false;
   if (filters.ids && !filters.ids.includes(product.id)) return false;
   if (filters.search) {
     const term = filters.search.trim().toLowerCase();
-    const haystack = [product.name, product.description, product.productType, product.material, product.sellerName, ...product.colors.map((c) => c.name)]
+    const haystack = [product.name, product.description, categoryName(product.category), product.productType, product.material, product.sellerName, ...product.colors.map((c) => c.name)]
       .join(" ")
       .toLowerCase();
     if (!haystack.includes(term)) return false;
@@ -159,6 +181,11 @@ export const mockApi: DataApi = {
     return delay(products);
   },
 
+  async getCategories() {
+    const db = loadDb();
+    return delay(summarizeCategories(db.products));
+  },
+
   async getProduct(slugOrId) {
     const db = loadDb();
     const product = db.products.find(
@@ -189,7 +216,7 @@ export const mockApi: DataApi = {
         accountNumber: input.bank.accountNumber.trim(),
         accountName: input.bank.accountName.trim(),
       },
-      paystackSubaccountCode: null,
+      payout: { status: "not_set_up", reference: null, provider: null },
       status: "active",
       createdAt: new Date().toISOString(),
       passwordHash: weakHash(input.password),
@@ -242,7 +269,7 @@ export const mockApi: DataApi = {
     if (!input.name.trim()) throw new ApiError("Please add a title.");
     if (input.images.length === 0) throw new ApiError("Please add at least one photo.");
     if (!(input.price > 0)) throw new ApiError("Please enter a price.");
-    if (!input.productType.trim()) throw new ApiError("Please enter a product type, e.g. Shirt, Dress or Bag.");
+    if (!isCategorySlug(input.category)) throw new ApiError("Please choose a category.");
     if (input.sizes.length === 0) throw new ApiError("Please add at least one size.");
     if (input.colors.length === 0) throw new ApiError("Please add at least one colour.");
 
@@ -253,7 +280,8 @@ export const mockApi: DataApi = {
       slug,
       name: input.name.trim(),
       description: input.description.trim(),
-      productType: input.productType.trim(),
+      category: input.category,
+      productType: (input.productType ?? "").trim(),
       gender: input.gender ?? "unisex",
       typeOption:
         input.typeOption && input.typeOption.values.length > 0
@@ -371,10 +399,11 @@ export const mockApi: DataApi = {
     product.rejectionReason = undefined;
     product.updatedAt = new Date().toISOString();
 
-    // The real backend creates the seller's Paystack subaccount at this point (see BACKEND.md).
+    // The real backend sets up the seller's payout beneficiary around this point (verify the
+    // bank account, register it for payouts). The mock just marks payouts as active.
     const seller = db.sellers.find((item) => item.id === product.sellerId);
-    if (seller && !seller.paystackSubaccountCode) {
-      seller.paystackSubaccountCode = `ACCT_mock_${seller.id.slice(-6)}`;
+    if (seller && seller.payout.status === "not_set_up") {
+      seller.payout = { status: "active", reference: `PAYOUT_mock_${seller.id.slice(-6)}`, provider: "Demo" };
     }
 
     saveDb(db);
@@ -493,8 +522,8 @@ export const mockApi: DataApi = {
     const subtotal = items.reduce((sum, item) => sum + item.lineTotal, 0);
     const shippingCost = SHIPPING_RATES[input.shippingMethod] ?? SHIPPING_RATES.standard;
 
-    // The existing mock payment route (/api/checkout) validates totals and returns the
-    // "payment page" URL, exactly like a payment provider would.
+    // The mock checkout route (/api/checkout) re-validates totals and returns the same
+    // checkout-init shape the real backend returns: { orderId, ref, amount, publicKey }.
     const response = await fetch("/api/checkout", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -509,18 +538,15 @@ export const mockApi: DataApi = {
       }),
     });
 
-    const data = (await response.json().catch(() => ({}))) as { error?: string; checkoutUrl?: string; reference?: string };
-    if (!response.ok || !data.checkoutUrl) {
+    const data = (await response.json().catch(() => ({}))) as Partial<CheckoutInit> & { error?: string };
+    if (!response.ok || !data.ref || !data.orderId || typeof data.amount !== "number") {
       throw new ApiError(data.error || "We couldn't start the payment. Please try again.", response.status || 500);
     }
 
-    const reference =
-      data.reference || new URL(data.checkoutUrl, window.location.origin).searchParams.get("ref") || randomId("RF");
-
     const now = new Date().toISOString();
     const order: Order = {
-      id: randomId("ord"),
-      reference,
+      id: data.orderId,
+      reference: data.ref,
       customer: input.customer,
       items,
       subtotal,
@@ -530,20 +556,50 @@ export const mockApi: DataApi = {
       sellerSplits: buildSellerSplits(items),
       shippingMethod: input.shippingMethod,
       paymentMethod: input.paymentMethod,
-      // Mock card payments "succeed" instantly; transfers wait for confirmation.
-      status: input.paymentMethod === "card" ? "paid" : "pending",
+      // Stays "pending" until confirmPayment() (the real backend: until Fairsure verifies it).
+      status: "pending",
+      paymentStatus: "unpaid",
+      paymentReference: null,
+      paidAt: null,
       createdAt: now,
       updatedAt: now,
     };
 
-    for (const item of items) {
-      const product = db.products.find((p) => p.id === item.productId);
-      if (product) product.stock = Math.max(0, product.stock - item.quantity);
-    }
-
     db.orders.push(order);
     saveDb(db);
-    return delay({ order, checkoutUrl: data.checkoutUrl });
+    return delay({
+      orderId: order.id,
+      ref: order.reference,
+      amount: data.amount,
+      currency: "NGN" as const,
+      publicKey: data.publicKey ?? null,
+      narration: data.narration,
+      order,
+    });
+  },
+
+  async confirmPayment(ref, transactionRef) {
+    // DEMO ONLY: there is no private key in the browser, so the mock cannot ask Fairsure.
+    // It trusts the redirect and marks the order paid. The real backend MUST verify with
+    // GET {base}/api/v1/transactions/{ref} (or rely on the signed webhook) instead.
+    const db = loadDb();
+    const order = db.orders.find((item) => item.reference === ref);
+    if (!order) return delay({ status: "pending" as const, order: null, message: "We couldn't find this order in this browser." });
+
+    if (order.paymentStatus !== "paid") {
+      const now = new Date().toISOString();
+      order.paymentStatus = "paid";
+      order.paymentReference = transactionRef ?? order.paymentReference ?? null;
+      order.paidAt = now;
+      if (order.status === "pending") order.status = "paid";
+      order.updatedAt = now;
+      for (const item of order.items) {
+        const product = db.products.find((p) => p.id === item.productId);
+        if (product) product.stock = Math.max(0, product.stock - item.quantity);
+      }
+      saveDb(db);
+    }
+    return delay({ status: "paid" as const, order, message: "Demo store: payment marked as paid without a server check." });
   },
 
   async getOrderByReference(reference) {

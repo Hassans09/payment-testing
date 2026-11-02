@@ -11,8 +11,10 @@ import { readString, removeKey, writeString } from "@/lib/client-storage";
 import type {
   AdminOverview,
   AdminSession,
-  CreateOrderResult,
+  CategorySummary,
+  CheckoutInit,
   Order,
+  PaymentConfirmation,
   Product,
   ProductFilters,
   Seller,
@@ -62,6 +64,7 @@ async function request<T>(
 function toQuery(filters: ProductFilters = {}): string {
   const params = new URLSearchParams();
   if (filters.gender && filters.gender !== "all") params.set("gender", filters.gender);
+  if (filters.category) params.set("category", filters.category);
   if (filters.search) params.set("search", filters.search);
   if (filters.sellerId) params.set("seller", filters.sellerId);
   if (filters.ids?.length) params.set("ids", filters.ids.join(","));
@@ -72,6 +75,7 @@ function toQuery(filters: ProductFilters = {}): string {
 export const httpApi: DataApi = {
   // Catalogue
   getProducts: (filters) => request<Product[]>(`/products${toQuery(filters)}`),
+  getCategories: () => request<CategorySummary[]>("/categories"),
   async getProduct(slugOrId) {
     try {
       return await request<Product>(`/products/${encodeURIComponent(slugOrId)}`);
@@ -149,7 +153,12 @@ export const httpApi: DataApi = {
   getAdminOverview: () => request<AdminOverview>("/admin/overview", { auth: "admin" }),
 
   // Orders
-  createOrder: (input) => request<CreateOrderResult>("/orders", { method: "POST", body: input }),
+  createOrder: (input) => request<CheckoutInit>("/orders", { method: "POST", body: input }),
+  confirmPayment: (ref, transactionRef) =>
+    request<PaymentConfirmation>(`/orders/${encodeURIComponent(ref)}/confirm`, {
+      method: "POST",
+      body: transactionRef ? { transactionRef } : {},
+    }),
   async getOrderByReference(reference) {
     try {
       return await request<Order>(`/orders/${encodeURIComponent(reference)}`);

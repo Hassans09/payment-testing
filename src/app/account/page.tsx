@@ -4,7 +4,7 @@ import { ArrowLeft, PackageSearch, ShieldCheck } from "lucide-react";
 
 export default function AccountPage() {
   return (
-    <main className="mx-auto flex min-h-[60vh] max-w-3xl items-center justify-center px-4 py-16 sm:px-6">
+    <div className="mx-auto flex min-h-[60vh] max-w-3xl items-center justify-center px-4 py-16 sm:px-6">
       <section className="w-full rounded-[30px] border border-[color:var(--brand-border)] bg-white p-8 text-center shadow-[0_16px_35px_rgba(91,64,50,0.05)] sm:p-12">
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[color:var(--brand-cream)]">
           <PackageSearch className="h-8 w-8 text-[color:var(--brand-primary)]" />
@@ -46,6 +46,6 @@ export default function AccountPage() {
           <Link href="/sell" className="font-semibold text-[color:var(--brand-deep)] underline">Open a store</Link>
         </p>
       </section>
-    </main>
+    </div>
   );
 }

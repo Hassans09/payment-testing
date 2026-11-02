@@ -1,32 +1,34 @@
 
 # Rebel Fashion
 
-A multi-vendor **fashion marketplace** frontend (all types of clothing and accessories) built with Next.js,
-TypeScript, and Tailwind CSS. The current collection is **kaftans** (30 products sold by Rebel Fashion itself).
-Shoppers buy from Rebel Fashion and from approved independent sellers; sellers sign up and list any clothing or
-accessory; an admin approves listings and manages orders. The platform keeps a commission
+A multi-vendor **general fashion marketplace** frontend built with Next.js 16, React 19, TypeScript and Tailwind CSS v4.
+Rebel Fashion's own products are kaftans for now (30 house products, more categories later); approved independent
+sellers list any clothing, shoes, bags or accessories in fixed categories (Kaftans, Hoodies, Jeans, T-shirts & Shirts,
+Dresses, Shoes, Bags, Accessories, Other); an admin approves listings and manages orders. Payments: **Fairsure**. The platform keeps a commission
 (`PLATFORM_COMMISSION_PERCENT`, 10%) on every marketplace sale.
 
 > **Frontend only.** Until a backend is connected, data lives in a mock store in the browser
-> (no demo sellers or fake listings; sellers sign up through the form). The backend will be Supabase:
-> start with **[BACKEND.md](./BACKEND.md)**, section 8.
+> (no demo sellers or fake listings; sellers sign up through the form). The backend developer builds Next.js API
+> routes with a database of their choice ("http" mode; Supabase optional): start with **[BACKEND.md](./BACKEND.md)**.
 
 ## Marketplace quick tour
 
 | Area | Routes |
 |------|--------|
-| Storefront | `/` (intro splash once per session), `/shop` (filters: gender, search, price), `/product/[slug]` (choose Type, Colour, Size), `/cart`, `/checkout`, `/checkout/success`, `/wishlist`, `/account` |
+| Storefront | `/` (intro splash once per session), `/shop` (category chips, gender, sold by, search, price; `?category=`, `?sold=platform\|marketplace`), `/category/[slug]`, `/product/[slug]` (choose Type, Colour, Size), `/cart`, `/checkout`, `/checkout/success`, `/wishlist`, `/account` |
 | Sellers | `/sell` (pitch), `/seller/signup`, `/seller/login`, `/seller/dashboard`, `/seller/listings/new` |
 | Admin | `/admin/login`, `/admin` (overview, pending listings, all products, sellers, orders) |
-| Mock API | `POST /api/checkout` (demo payment, needs `MOCK_PAYMENTS=true`) |
+| Mock API | `POST /api/checkout` (demo checkout-init, returns `{ orderId, ref, amount, publicKey }`, needs `MOCK_PAYMENTS=true`) |
 
 Admin login in mock mode: `ADMIN_DEMO_CREDENTIALS` in `src/lib/config.ts` (never shown in the UI).
 Sellers create real accounts at `/seller/signup`.
 
 Key files:
-- `src/lib/config.ts` — `SITE_NAME`, `PLATFORM_COMMISSION_PERCENT`, shipping rates, env switches.
+- `src/lib/config.ts` — `SITE_NAME`, `CATEGORIES`, `PLATFORM_COMMISSION_PERCENT`, shipping rates, env switches, Fairsure public settings.
+- `src/lib/payments/fairsure.ts` — loads the Fairsure inline checkout and opens the modal (public key only).
+- `src/app/template.tsx` + `src/components/page-transition.tsx` — page transitions; `src/components/scroll-reveal.tsx` — scroll reveal (`data-reveal`, `data-reveal-stagger`).
 - `src/lib/types.ts` — all domain types.
-- `src/lib/api/` — the only data layer (`index.ts` picks `mock.ts`, `http.ts` or a future `supabase.ts` from `NEXT_PUBLIC_API_MODE`).
+- `src/lib/api/` — the only data layer (`index.ts` picks `mock.ts`, `http.ts` or an optional `supabase.ts` from `NEXT_PUBLIC_API_MODE`).
 - `src/lib/seed-data.ts` — the platform's 30 kaftans. Photos are in `public/products/` (generated product shots, no faces).
 - `npm run test:images` — tests for the photo upload/compression pipeline.
 
@@ -64,16 +66,16 @@ The frontend is being developed separately from the backend integration, so some
 - Customer contact and delivery information
 - Nigerian states and Federal Capital Territory selection
 - Standard and priority shipping options
-- Card and bank transfer payment options
+- Card and bank transfer via the Fairsure inline checkout (sandbox or live); demo payment when no public key is set
 - Form validation and user-friendly error messages
 - Optional current-location detection for delivery details
 - Editable delivery address fields
 - Order summary before submission
 
 ### Order Handling
-- Checkout API integration point
-- Payment-provider handoff for supported online payments
-- Order confirmation flow for pay on delivery
+- Server-side order creation (`POST /orders` returns the Fairsure init values)
+- Fairsure modal; closing it or a failed payment keeps the bag
+- Success page asks the server to verify the payment (`POST /orders/:ref/confirm`)
 - Frontend structure prepared for future guest order tracking
 
 **Note:** Payment processing, payment verification, persistent order storage, and guest order tracking depend on the backend and payment-provider integration. The presence of a frontend option does not mean that a payment method is already operational.
@@ -145,59 +147,12 @@ http://localhost:3000
 
 ## Backend Integration
 
-See **[BACKEND.md](./BACKEND.md)** for the full API contract (every endpoint, auth, uploads and Paystack split payments).
+See **[BACKEND.md](./BACKEND.md)** for the full API contract: every endpoint, auth, categories, uploads and the
+Fairsure payment flow (checkout init, server-side verification, signed webhook, split-payment note).
 Switch data source with `NEXT_PUBLIC_API_MODE=mock|http|supabase` (see `.env.example`; legacy `NEXT_PUBLIC_USE_MOCK_API=false` = `http`).
 
-The legacy mock checkout integration point is still available:
-
-```text
-POST /api/checkout
-```
-
-The frontend and backend developers should agree on the API contract before integration.
-
-### Example Request
-
-```json
-{
-  "customer": {
-    "fullName": "Example Customer",
-    "email": "customer@example.com",
-    "phone": "08012345678",
-    "address": "Example Street",
-    "city": "Abuja",
-    "state": "Federal Capital Territory (FCT)"
-  },
-  "items": [],
-  "shippingMethod": "standard",
-  "paymentMethod": "card",
-  "displayedSubtotal": 0,
-  "displayedShipping": 3500,
-  "displayedTotal": 3500
-}
-```
-
-This is an illustrative request. Actual cart items and totals are supplied by the application. The backend must validate product prices, availability, shipping charges, and totals independently rather than trusting client-provided values.
-
-### Expected Response
-
-For card or bank transfer payments, the frontend currently expects a response containing a secure checkout URL:
-
-```json
-{
-  "checkoutUrl": "https://payment-provider.example/checkout"
-}
-```
-
-For pay on delivery, the frontend currently expects:
-
-```json
-{
-  "orderId": "server-generated-order-reference"
-}
-```
-
-These are expected response shapes, not real payment-provider endpoints or proof of an existing backend implementation.
+Payment environment variables: `NEXT_PUBLIC_FAIRSURE_ENV` (`sandbox`|`live`), `NEXT_PUBLIC_FAIRSURE_PUBLIC_KEY`
+(`TEST_…`/`LIVE_…`, optional) and, on the server only, `FAIRSURE_PRIVATE_KEY`. The private key never goes in the frontend.
 
 ### Backend Responsibilities
 
@@ -206,7 +161,7 @@ The backend should handle:
 - Server-side validation of customer and order data
 - Secure creation and storage of orders
 - Authoritative product pricing and shipping calculations
-- Payment-provider integration
+- Fairsure integration (checkout init, verification with the private key, webhook)
 - Server-side payment verification and payment status updates
 - Secure handling of provider credentials through environment variables
 - Guest order tracking using a secure, non-guessable reference or token

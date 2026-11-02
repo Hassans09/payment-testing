@@ -1,11 +1,13 @@
 import type {
   AdminOverview,
   AdminSession,
+  CategorySummary,
+  CheckoutInit,
   CreateOrderInput,
-  CreateOrderResult,
   NewListingInput,
   Order,
   OrderStatus,
+  PaymentConfirmation,
   Product,
   ProductFilters,
   Seller,
@@ -24,6 +26,8 @@ export interface DataApi {
   // ── Catalogue (public) ──
   /** Approved products only. */
   getProducts(filters?: ProductFilters): Promise<Product[]>;
+  /** Every category in CATEGORIES with its number of approved products (also the empty ones). */
+  getCategories(): Promise<CategorySummary[]>;
   /** Approved product by slug or id, or null. */
   getProduct(slugOrId: string): Promise<Product | null>;
 
@@ -56,8 +60,17 @@ export interface DataApi {
   updateOrderStatus(orderId: string, status: OrderStatus): Promise<Order>;
   getAdminOverview(): Promise<AdminOverview>;
 
-  // ── Orders / checkout ──
-  createOrder(input: CreateOrderInput): Promise<CreateOrderResult>;
+  // ── Orders / checkout (Fairsure) ──
+  /**
+   * Creates the order (status "pending") from server-side prices and returns what the browser
+   * needs to open the Fairsure inline checkout: { orderId, ref, amount, publicKey }.
+   */
+  createOrder(input: CreateOrderInput): Promise<CheckoutInit>;
+  /**
+   * Asks the backend to verify the payment for `ref` with Fairsure (private key, server-side)
+   * and returns the order's payment state. Called by /checkout/success.
+   */
+  confirmPayment(ref: string, transactionRef?: string): Promise<PaymentConfirmation>;
   getOrderByReference(reference: string): Promise<Order | null>;
 }
 

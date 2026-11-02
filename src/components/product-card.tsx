@@ -8,16 +8,10 @@ import { QuickAddSheet } from "@/components/quick-add-sheet";
 import { SmartImage } from "@/components/smart-image";
 import { useStore } from "@/components/store-provider";
 import { PLATFORM_SELLER_ID } from "@/lib/config";
-import { formatPrice } from "@/lib/format";
+import { formatPrice, productLabel } from "@/lib/format";
 import type { Product } from "@/lib/types";
 
-export function ProductCard({
-  product,
-  animationDelay,
-}: {
-  product: Product;
-  animationDelay?: string;
-}) {
+export function ProductCard({ product }: { product: Product }) {
   const { isWishlisted, toggleWishlist } = useStore();
   const [optionsOpen, setOptionsOpen] = useState(false);
   const hoverImage = product.images[1] ?? product.colors[1]?.image;
@@ -32,20 +26,19 @@ export function ProductCard({
 
   return (
     <article
-      style={{ animationDelay }}
-      className="group relative flex min-w-0 flex-col justify-between overflow-hidden rounded-[26px] border border-[color:var(--brand-border)] bg-white shadow-[0_12px_35px_rgba(91,64,50,0.06)] motion-card-float"
+      className="group relative flex min-w-0 flex-col justify-between overflow-hidden rounded-[18px] border sm:rounded-[26px] border-[color:var(--brand-border)] bg-white shadow-[0_12px_35px_rgba(91,64,50,0.06)] motion-card-float"
     >
       <div className="relative">
         <Link
           href={`/product/${product.slug}`}
-          className="block overflow-hidden rounded-t-[26px]"
+          className="block overflow-hidden rounded-t-[18px] sm:rounded-t-[26px]"
         >
           <div className="relative aspect-[3/4] overflow-hidden bg-[color:var(--brand-ivory)]">
             <SmartImage
               src={product.images[0]}
               alt={product.name}
               fill
-              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+              sizes="(max-width: 1024px) 50vw, 25vw"
               className={`object-cover object-top transition duration-700 ease-out group-hover:scale-105 ${hoverImage ? "group-hover:opacity-0" : ""}`}
             />
             {hoverImage && (
@@ -53,7 +46,7 @@ export function ProductCard({
                 src={hoverImage}
                 alt=""
                 fill
-                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                sizes="(max-width: 1024px) 50vw, 25vw"
                 className="object-cover object-top opacity-0 transition duration-700 ease-out group-hover:scale-105 group-hover:opacity-100"
               />
             )}
@@ -62,7 +55,7 @@ export function ProductCard({
         </Link>
 
         {product.badge && (
-          <span className="absolute left-3 top-3 rounded-full bg-[color:var(--brand-deep)]/90 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white">
+          <span className="absolute left-2 top-2 max-w-[calc(100%-3.5rem)] truncate rounded-full bg-[color:var(--brand-deep)]/90 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-white sm:left-3 sm:top-3 sm:px-3 sm:py-1 sm:text-[10px] sm:tracking-[0.16em]">
             {product.badge}
           </span>
         )}
@@ -79,7 +72,7 @@ export function ProductCard({
             event.stopPropagation();
             toggleWishlist(product.id);
           }}
-          className="absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full border border-white/60 bg-white/90 text-[color:var(--brand-deep)] backdrop-blur-sm"
+          className="absolute right-1.5 top-1.5 flex h-11 w-11 items-center justify-center rounded-full border border-white/60 bg-white/90 text-[color:var(--brand-deep)] sm:right-3 sm:top-3"
         >
           <Heart
             className={`h-4 w-4 ${
@@ -88,7 +81,7 @@ export function ProductCard({
           />
         </button>
 
-        <div className="absolute inset-x-3 bottom-3 opacity-0 transition group-hover:opacity-100 max-lg:opacity-100">
+        <div className="absolute inset-x-3 bottom-3 hidden opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100 lg:block">
           <button
             type="button"
             onClick={openOptions}
@@ -101,7 +94,7 @@ export function ProductCard({
         </div>
       </div>
 
-      <div className="flex flex-1 flex-col justify-between p-4 sm:p-5">
+      <div className="flex flex-1 flex-col justify-between p-3 sm:p-5">
         <div>
           <div className="mb-2 flex items-center gap-1.5">
             {product.colors.slice(0, 5).map((color) => (
@@ -117,14 +110,14 @@ export function ProductCard({
             )}
           </div>
 
-          <Link href={`/product/${product.slug}`} className="block">
-            <h3 className="line-clamp-2 min-h-[2.5rem] text-sm font-semibold text-[color:var(--brand-deep)] transition hover:text-[color:var(--brand-primary)]">
+          <Link href={`/product/${product.slug}`} className="block min-h-11">
+            <h3 className="line-clamp-2 min-h-[2.5rem] text-[13px] font-semibold leading-snug sm:text-sm text-[color:var(--brand-deep)] transition hover:text-[color:var(--brand-primary)]">
               {product.name}
             </h3>
           </Link>
 
           <p className="mt-1 truncate text-[11px] text-[color:var(--brand-charcoal)]/60">
-            {[typeValues.length > 0 ? typeValues.join(" / ") : product.productType, product.sizes.length > 0 ? `${product.sizes[0]}–${product.sizes[product.sizes.length - 1]}` : ""]
+            {[typeValues.length > 0 ? typeValues.join(" / ") : productLabel(product), product.sizes.length > 0 ? `${product.sizes[0]}–${product.sizes[product.sizes.length - 1]}` : ""]
               .filter(Boolean)
               .join(" · ")}
           </p>
@@ -135,11 +128,11 @@ export function ProductCard({
           </p>
         </div>
 
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-[color:var(--brand-border)]/60 pt-3">
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5 border-t border-[color:var(--brand-border)]/60 pt-3">
           <span className="flex items-baseline gap-2">
-            <span className="text-base font-bold text-[color:var(--brand-deep)]">{formatPrice(product.price)}</span>
+            <span className="text-sm font-bold text-[color:var(--brand-deep)] sm:text-base">{formatPrice(product.price)}</span>
             {product.compareAtPrice && (
-              <span className="text-xs text-[color:var(--brand-charcoal)]/45 line-through">{formatPrice(product.compareAtPrice)}</span>
+              <span className="hidden text-xs text-[color:var(--brand-charcoal)]/45 line-through min-[400px]:inline">{formatPrice(product.compareAtPrice)}</span>
             )}
           </span>
 
@@ -147,7 +140,8 @@ export function ProductCard({
             type="button"
             onClick={openOptions}
             disabled={product.stock <= 0}
-            className="rounded-full bg-[color:var(--brand-primary)] px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-wider text-[color:var(--brand-deep)] transition hover:bg-[color:var(--brand-secondary)] disabled:opacity-50"
+            aria-label={`Choose options and add ${product.name} to bag`}
+            className="inline-flex h-11 min-w-11 items-center justify-center rounded-full bg-[color:var(--brand-primary)] px-3.5 text-[11px] font-bold uppercase tracking-wider text-[color:var(--brand-deep)] transition hover:bg-[color:var(--brand-secondary)] disabled:opacity-50 lg:h-9"
           >
             Add +
           </button>
@@ -159,11 +153,26 @@ export function ProductCard({
   );
 }
 
+/** Product grid: 2 columns on phones, 3 on laptops, 4 on wide screens. */
+export const PRODUCT_GRID_CLASS =
+  "grid grid-cols-[repeat(2,minmax(0,1fr))] gap-3 sm:gap-5 lg:grid-cols-[repeat(3,minmax(0,1fr))] xl:grid-cols-[repeat(4,minmax(0,1fr))]";
+
+/** A grid of product cards that float in, slightly staggered, as they scroll into view. */
+export function ProductGrid({ products }: { products: Product[] }) {
+  return (
+    <div className={PRODUCT_GRID_CLASS} data-reveal-stagger>
+      {products.map((product) => (
+        <ProductCard key={product.id} product={product} />
+      ))}
+    </div>
+  );
+}
+
 export function ProductGridSkeleton({ count = 4 }: { count?: number }) {
   return (
-    <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+    <div className={PRODUCT_GRID_CLASS}>
       {Array.from({ length: count }).map((_, index) => (
-        <div key={index} className="animate-pulse overflow-hidden rounded-[26px] border border-[color:var(--brand-border)] bg-white">
+        <div key={index} className="animate-pulse overflow-hidden rounded-[18px] border sm:rounded-[26px] border-[color:var(--brand-border)] bg-white">
           <div className="aspect-[3/4] bg-[color:var(--brand-ivory)]" />
           <div className="space-y-2 p-5">
             <div className="h-3 w-2/3 rounded bg-[color:var(--brand-ivory)]" />

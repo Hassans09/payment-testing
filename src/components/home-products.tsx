@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, ArrowUpDown } from "lucide-react";
 
 import { ProductGrid, ProductGridSkeleton } from "@/components/product-card";
 import { useAsync } from "@/hooks/use-async";
@@ -12,74 +12,88 @@ import { categoryHref } from "@/lib/categories";
 import { SORT_OPTIONS, sortProducts, type SortKey } from "@/lib/product-sort";
 import type { Product } from "@/lib/types";
 
-const FIRST_PAGE = 12;
-const MAX_ON_HOME = 24;
+const ON_HOME = 12;
 /** 2 rows on phones (2 columns), 1 row on wide screens: visible at once, never waiting on the reveal. */
 const EAGER_CARDS = 4;
 
+/** Short sort labels so the control stays small next to the chips on phones. */
+const SHORT_SORT_LABEL: Record<string, string> = {
+  discover: "Discover",
+  newest: "Newest",
+  "price-asc": "Price: low",
+  "price-desc": "Price: high",
+  name: "Name A–Z",
+};
+
 const chip =
-  "inline-flex min-h-11 shrink-0 items-center whitespace-nowrap rounded-full border px-4 text-xs font-bold uppercase tracking-wider transition";
-const chipOff = "border-[color:var(--brand-border)] bg-white text-[color:var(--brand-charcoal)]/80 hover:bg-[color:var(--brand-soft)]/50";
+  "inline-flex min-h-10 shrink-0 items-center whitespace-nowrap rounded-full border px-4 text-[11px] font-bold uppercase tracking-wider transition";
+const chipOff = "border-[color:var(--brand-border)] bg-white text-[color:var(--brand-charcoal)]/75 hover:bg-[color:var(--brand-soft)]/50";
 
 /**
- * The homepage product feed: category chips (only categories with approved products), item
- * count + sort, then one grid mixing Rebel Fashion's own products with approved seller
- * listings. `initial` (the platform catalogue) is rendered on the server so products are in
- * the first HTML; the API result (which adds marketplace listings) replaces it.
+ * The homepage product feed: a heading, one tidy row (category chips that scroll sideways on
+ * phones, the item count from tablet up, and sort), then one grid mixing Rebel Fashion's own
+ * products with approved seller listings. `initial` (the platform catalogue) is rendered on the
+ * server so products are in the first HTML; the API result (which adds marketplace listings)
+ * replaces it.
  */
 export function HomeProducts({ initial }: { initial: Product[] }) {
   const categories = useNonEmptyCategories();
   const { data } = useAsync(() => getProducts(), [], initial);
   const [sort, setSort] = useState<SortKey>("discover");
-  const [count, setCount] = useState(FIRST_PAGE);
 
   const products = sortProducts(data ?? [], sort);
-  const visible = products.slice(0, count);
-  const canLoadMore = count < Math.min(products.length, MAX_ON_HOME);
+  const visible = products.slice(0, ON_HOME);
 
   return (
-    <section id="shop" aria-labelledby="home-products-title" className="mx-auto max-w-7xl scroll-mt-24 px-4 pb-10 sm:px-6 lg:px-8">
-      {categories.length > 0 && (
-        <nav aria-label="Shop by category" className="mb-3 overflow-x-auto scrollbar-none">
-          <div className="flex w-max gap-2">
-            <Link href="/shop" className={`${chip} border-[color:var(--brand-deep)] bg-[color:var(--brand-deep)] text-white`}>
-              All
-            </Link>
-            {categories.map((category) => (
-              <Link key={category.slug} href={categoryHref(category.slug)} className={`${chip} ${chipOff}`}>
-                {category.name}
-              </Link>
-            ))}
-            <Link href="/shop?sold=marketplace" className={`${chip} ${chipOff}`}>
-              From our sellers
-            </Link>
-          </div>
-        </nav>
-      )}
+    <section
+      id="shop"
+      aria-labelledby="home-products-title"
+      className="mx-auto max-w-7xl scroll-mt-24 px-4 pb-12 pt-6 sm:px-6 sm:pb-16 sm:pt-12 lg:px-8"
+    >
+      <h2 id="home-products-title" className="text-xl font-extrabold leading-tight tracking-tight text-[color:var(--brand-deep)] sm:text-3xl">
+        New in &amp; trending
+      </h2>
 
-      <div className="mb-4 flex flex-wrap items-end justify-between gap-x-3 gap-y-2">
-        <div className="min-w-0">
-          <h2 id="home-products-title" className="text-[1.4rem] font-extrabold leading-tight tracking-tight text-[color:var(--brand-deep)] sm:text-3xl">
-            New in &amp; trending
-          </h2>
-          <p className="text-xs font-medium uppercase tracking-wider text-[color:var(--brand-charcoal)]/60" aria-live="polite">
-            <strong className="font-bold text-[color:var(--brand-deep)]">{products.length}</strong> items from us and our sellers
-          </p>
-        </div>
-        <label htmlFor="home-sort" className="flex min-h-11 items-center gap-2 rounded-full border border-[color:var(--brand-border)] bg-white pl-3.5 pr-2">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-[color:var(--brand-charcoal)]/60">Sort</span>
+      <div className="mb-5 mt-3 flex items-center gap-3 sm:mb-8 sm:mt-4">
+        {categories.length > 0 ? (
+          <nav
+            aria-label="Shop by category"
+            className="min-w-0 flex-1 overflow-x-auto scrollbar-none [mask-image:linear-gradient(to_right,black_85%,transparent)] sm:[mask-image:none]"
+          >
+            <div className="flex w-max gap-2 pr-6 sm:pr-0">
+              <Link href="/shop" className={`${chip} border-[color:var(--brand-deep)] bg-[color:var(--brand-deep)] text-white`}>
+                All
+              </Link>
+              {categories.map((category) => (
+                <Link key={category.slug} href={categoryHref(category.slug)} className={`${chip} ${chipOff}`}>
+                  {category.name}
+                </Link>
+              ))}
+              <Link href="/shop?sold=marketplace" className={`${chip} ${chipOff}`}>
+                From our sellers
+              </Link>
+            </div>
+          </nav>
+        ) : (
+          <div className="flex-1" />
+        )}
+
+        <p className="hidden shrink-0 text-xs text-[color:var(--brand-charcoal)]/55 md:block" aria-live="polite">
+          {products.length} items
+        </p>
+
+        <label htmlFor="home-sort" className="relative flex min-h-10 shrink-0 items-center rounded-full border border-[color:var(--brand-border)] bg-white pl-3 pr-2">
+          <span className="sr-only">Sort products</span>
+          <ArrowUpDown className="pointer-events-none h-3.5 w-3.5 shrink-0 text-[color:var(--brand-charcoal)]/55" aria-hidden="true" />
           <select
             id="home-sort"
             value={sort}
-            onChange={(event) => {
-              setSort(event.target.value as SortKey);
-              setCount(FIRST_PAGE);
-            }}
-            className="min-h-10 max-w-[10.5rem] cursor-pointer bg-transparent text-base font-semibold text-[color:var(--brand-deep)] focus:outline-none sm:text-sm"
+            onChange={(event) => setSort(event.target.value as SortKey)}
+            className="min-h-10 max-w-[7.5rem] cursor-pointer [field-sizing:content] bg-transparent pl-1.5 text-base font-semibold text-[color:var(--brand-deep)] focus:outline-none sm:max-w-[10.5rem] sm:text-sm"
           >
             {SORT_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
-                {option.label}
+                {SHORT_SORT_LABEL[option.value] ?? option.label}
               </option>
             ))}
           </select>
@@ -88,19 +102,10 @@ export function HomeProducts({ initial }: { initial: Product[] }) {
 
       {data ? <ProductGrid products={visible} eagerCount={EAGER_CARDS} /> : <ProductGridSkeleton count={4} />}
 
-      <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-        {canLoadMore && (
-          <button
-            type="button"
-            onClick={() => setCount((value) => Math.min(value + FIRST_PAGE, MAX_ON_HOME))}
-            className="inline-flex min-h-12 w-full items-center justify-center rounded-full border border-[color:var(--brand-deep)]/25 bg-white px-8 text-xs font-bold uppercase tracking-wider text-[color:var(--brand-deep)] transition hover:bg-[color:var(--brand-soft)]/50 sm:w-auto"
-          >
-            Load more
-          </button>
-        )}
+      <div className="mt-10 flex justify-center sm:mt-14">
         <Link
           href={sort === "discover" ? "/shop" : `/shop?sort=${sort}`}
-          className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-[color:var(--brand-primary)] px-8 text-xs font-bold uppercase tracking-wider text-[color:var(--brand-deep)] transition hover:bg-[color:var(--brand-secondary)] sm:w-auto"
+          className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full border border-[color:var(--brand-deep)]/25 bg-white px-8 text-xs font-bold uppercase tracking-wider text-[color:var(--brand-deep)] transition hover:bg-[color:var(--brand-soft)]/50 sm:w-auto"
         >
           View all {products.length} products <ArrowRight className="h-4 w-4" />
         </Link>

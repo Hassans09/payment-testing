@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { Check, Sparkles } from "lucide-react";
+import { Check } from "lucide-react";
 
 export function NewsletterSignup() {
   const [email, setEmail] = useState("");
@@ -26,19 +26,15 @@ export function NewsletterSignup() {
   };
 
   return (
-    <section className="mx-auto max-w-7xl px-4 pb-20 sm:px-6 lg:px-8">
-      <div className="rounded-[36px] border border-[color:var(--brand-border)] bg-[linear-gradient(135deg,_rgba(253,249,244,1),_rgba(248,243,236,1))] p-8 sm:p-12 lg:p-16 shadow-[0_20px_50px_rgba(91,64,50,0.05)]">
-        <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
+    <section className="mx-auto max-w-7xl px-4 pb-4 sm:px-6 lg:px-8">
+      <div className="rounded-[22px] border border-[color:var(--brand-border)] bg-[linear-gradient(135deg,_rgba(253,249,244,1),_rgba(248,243,236,1))] p-6 sm:rounded-[28px] sm:p-10 lg:p-12">
+        <div className="grid gap-6 lg:gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
           <div>
-            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-[color:var(--brand-primary)]">
-              <Sparkles className="h-3.5 w-3.5" />
-              <span>Store Updates</span>
-            </div>
-            <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-[color:var(--brand-deep)] sm:text-4xl">
-              Get new arrivals in your inbox.
+            <h2 className="text-xl font-extrabold tracking-tight text-[color:var(--brand-deep)] sm:text-3xl">
+              New arrivals, in your inbox.
             </h2>
-            <p className="mt-3 text-sm text-[color:var(--brand-charcoal)]/75 max-w-lg leading-relaxed">
-              Subscribe for updates on seasonal launches, gifting edits, and product restocks.
+            <p className="mt-2 max-w-lg text-sm leading-relaxed text-[color:var(--brand-charcoal)]/70">
+              Launches and restocks, now and then. Unsubscribe anytime.
             </p>
           </div>
 
@@ -48,12 +44,13 @@ export function NewsletterSignup() {
                 type="email"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
-                placeholder="Enter your email address..."
-                className="flex-1 rounded-full border border-[color:var(--brand-border)] bg-white px-5 py-3.5 text-xs text-[color:var(--brand-charcoal)] outline-none transition focus:border-[color:var(--brand-primary)] shadow-2xs"
+                placeholder="Your email address"
+                aria-label="Email address"
+                className="min-h-12 flex-1 rounded-full border border-[color:var(--brand-border)] bg-white px-5 text-base sm:text-sm text-[color:var(--brand-charcoal)] outline-none transition focus:border-[color:var(--brand-primary)] shadow-2xs"
               />
               <button
                 type="submit"
-                className="inline-flex shrink-0 items-center justify-center rounded-full bg-[color:var(--brand-primary)] px-8 py-3.5 text-xs font-bold uppercase tracking-wider text-[color:var(--brand-deep)] shadow-sm hover:bg-[color:var(--brand-secondary)] transition"
+                className="inline-flex min-h-12 shrink-0 items-center justify-center rounded-full bg-[color:var(--brand-primary)] px-8 text-xs font-bold uppercase tracking-wider text-[color:var(--brand-deep)] shadow-sm hover:bg-[color:var(--brand-secondary)] transition"
               >
                 Subscribe
               </button>
@@ -69,10 +66,6 @@ export function NewsletterSignup() {
             {status === "error" && (
               <p className="text-xs font-semibold text-red-600">{message}</p>
             )}
-
-            <p className="text-[11px] text-[color:var(--brand-charcoal)]/55">
-              By joining, you agree to receive editorial releases. Unsubscribe anytime in one click.
-            </p>
           </form>
         </div>
       </div>

@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Heart, SlidersHorizontal, Store } from "lucide-react";
+import { Heart, Plus, SlidersHorizontal, Store } from "lucide-react";
 
 import { QuickAddSheet } from "@/components/quick-add-sheet";
 import { SmartImage } from "@/components/smart-image";
 import { useStore } from "@/components/store-provider";
 import { PLATFORM_SELLER_ID } from "@/lib/config";
-import { formatPrice, productLabel } from "@/lib/format";
+import { formatPrice } from "@/lib/format";
 import type { Product } from "@/lib/types";
 
 export function ProductCard({ product, eager = false }: { product: Product; eager?: boolean }) {
@@ -16,7 +16,6 @@ export function ProductCard({ product, eager = false }: { product: Product; eage
   const [optionsOpen, setOptionsOpen] = useState(false);
   const hoverImage = product.images[1] ?? product.colors[1]?.image;
   const isMarketplace = product.sellerId !== PLATFORM_SELLER_ID;
-  const typeValues = product.typeOption?.values ?? [];
 
   const openOptions = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
@@ -58,9 +57,10 @@ export function ProductCard({ product, eager = false }: { product: Product; eage
           </div>
         </Link>
 
-        {product.badge && (
-          <span className="absolute left-2 top-2 max-w-[calc(100%-3.5rem)] truncate rounded-full bg-[color:var(--brand-deep)]/90 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-white sm:left-3 sm:top-3 sm:px-3 sm:py-1 sm:text-[10px] sm:tracking-[0.16em]">
-            {product.badge}
+        {/* Only the label a shopper needs before tapping: sold out. */}
+        {product.stock <= 0 && (
+          <span className="absolute left-2 top-2 rounded-full bg-[color:var(--brand-deep)]/90 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-white sm:left-3 sm:top-3 sm:py-1">
+            Sold out
           </span>
         )}
 
@@ -98,45 +98,24 @@ export function ProductCard({ product, eager = false }: { product: Product; eage
         </div>
       </div>
 
-      <div className="flex flex-1 flex-col justify-between p-3 sm:p-5">
+      <div className="flex flex-1 flex-col justify-between px-3 pb-3 pt-3 sm:px-5 sm:pb-5 sm:pt-4">
         <div>
-          <div className="mb-2 flex items-center gap-1.5">
-            {product.colors.slice(0, 5).map((color) => (
-              <span
-                key={color.name}
-                title={color.name}
-                className="h-3 w-3 rounded-full border border-black/15"
-                style={{ backgroundColor: color.hex }}
-              />
-            ))}
-            {product.colors.length > 5 && (
-              <span className="text-[10px] font-semibold text-[color:var(--brand-charcoal)]/60">+{product.colors.length - 5}</span>
-            )}
-          </div>
-
-          <Link href={`/product/${product.slug}`} className="block min-h-11">
-            <h3 className="line-clamp-2 min-h-[2.5rem] text-[13px] font-semibold leading-snug sm:text-sm text-[color:var(--brand-deep)] transition hover:text-[color:var(--brand-primary)]">
+          <Link href={`/product/${product.slug}`} className="block">
+            <h3 className="line-clamp-2 text-[13px] font-semibold leading-snug text-[color:var(--brand-deep)] transition hover:text-[color:var(--brand-primary)] sm:text-sm">
               {product.name}
             </h3>
           </Link>
-
-          <p className="mt-1 truncate text-[11px] text-[color:var(--brand-charcoal)]/60">
-            {[typeValues.length > 0 ? typeValues.join(" / ") : productLabel(product), product.sizes.length > 0 ? `${product.sizes[0]}–${product.sizes[product.sizes.length - 1]}` : ""]
-              .filter(Boolean)
-              .join(" · ")}
-          </p>
-
-          <p className="mt-1 flex items-center gap-1 truncate text-xs text-[color:var(--brand-charcoal)]/65">
-            {isMarketplace && <Store className="h-3 w-3 shrink-0 text-[color:var(--brand-primary)]" />}
+          <p className="mt-1 flex items-center gap-1 truncate text-[11px] text-[color:var(--brand-charcoal)]/60 sm:text-xs">
+            {isMarketplace && <Store className="h-3 w-3 shrink-0 text-[color:var(--brand-primary)]" aria-hidden="true" />}
             <span className="truncate">Sold by {product.sellerName}</span>
           </p>
         </div>
 
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5 border-t border-[color:var(--brand-border)]/60 pt-3">
-          <span className="flex items-baseline gap-2">
+        <div className="mt-2.5 flex items-center justify-between gap-2 sm:mt-3">
+          <span className="flex min-w-0 items-baseline gap-2">
             <span className="text-sm font-bold text-[color:var(--brand-deep)] sm:text-base">{formatPrice(product.price)}</span>
             {product.compareAtPrice && (
-              <span className="hidden text-xs text-[color:var(--brand-charcoal)]/45 line-through min-[400px]:inline">{formatPrice(product.compareAtPrice)}</span>
+              <span className="hidden text-xs text-[color:var(--brand-charcoal)]/45 line-through xl:inline">{formatPrice(product.compareAtPrice)}</span>
             )}
           </span>
 
@@ -145,9 +124,9 @@ export function ProductCard({ product, eager = false }: { product: Product; eage
             onClick={openOptions}
             disabled={product.stock <= 0}
             aria-label={`Choose options and add ${product.name} to bag`}
-            className="inline-flex h-11 min-w-11 items-center justify-center rounded-full bg-[color:var(--brand-primary)] px-3.5 text-[11px] font-bold uppercase tracking-wider text-[color:var(--brand-deep)] transition hover:bg-[color:var(--brand-secondary)] disabled:opacity-50 lg:h-9"
+            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[color:var(--brand-border)] text-[color:var(--brand-deep)] transition hover:border-[color:var(--brand-primary)] hover:bg-[color:var(--brand-primary)] disabled:opacity-40 lg:h-9 lg:w-9"
           >
-            Add +
+            <Plus className="h-4 w-4" aria-hidden="true" />
           </button>
         </div>
       </div>
@@ -157,9 +136,9 @@ export function ProductCard({ product, eager = false }: { product: Product; eage
   );
 }
 
-/** Product grid: 2 columns on phones, 3 on laptops, 4 on wide screens. */
+/** Product grid: 2 columns on phones, 3 on tablets, 4 (max) from laptops up. */
 export const PRODUCT_GRID_CLASS =
-  "grid grid-cols-[repeat(2,minmax(0,1fr))] gap-3 sm:gap-5 lg:grid-cols-[repeat(3,minmax(0,1fr))] xl:grid-cols-[repeat(4,minmax(0,1fr))]";
+  "grid grid-cols-[repeat(2,minmax(0,1fr))] gap-x-3 gap-y-5 sm:gap-x-5 sm:gap-y-8 md:grid-cols-[repeat(3,minmax(0,1fr))] lg:grid-cols-[repeat(4,minmax(0,1fr))] lg:gap-x-6 lg:gap-y-10";
 
 /** A grid of product cards that float in, slightly staggered, as they scroll into view. */
 export function ProductGrid({ products, eagerCount = 0 }: { products: Product[]; eagerCount?: number }) {

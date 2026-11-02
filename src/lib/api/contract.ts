@@ -1,4 +1,15 @@
 import type {
+  FulfilmentStatus,
+  ListingReport,
+  ListingUpdateInput,
+  PayoutSummary,
+  PublicSellerProfile,
+  ReportInput,
+  ReviewInput,
+  ReviewSummary,
+  SellerProfileInput,
+  SellerStatus,
+  TrackedOrder,
   AdminOverview,
   AdminSession,
   CategorySummary,
@@ -30,6 +41,13 @@ export interface DataApi {
   getCategories(): Promise<CategorySummary[]>;
   /** Approved product by slug or id, or null. */
   getProduct(slugOrId: string): Promise<Product | null>;
+  /** Public storefront profile of an active seller (or the platform itself), or null. */
+  getSellerProfile(sellerId: string): Promise<PublicSellerProfile | null>;
+  getReviews(productId: string): Promise<ReviewSummary>;
+  addReview(productId: string, input: ReviewInput): Promise<ReviewSummary>;
+  reportListing(productId: string, input: ReportInput): Promise<void>;
+  /** Order lookup for guests: reference + the email or phone used at checkout. */
+  trackOrder(reference: string, emailOrPhone: string): Promise<TrackedOrder | null>;
 
   // ── Sellers ──
   createSeller(input: SellerSignupInput): Promise<SellerSession>;
@@ -45,6 +63,13 @@ export interface DataApi {
   uploadListingImage(file: File): Promise<string>;
   /** Orders that contain the signed-in seller's products (their lines only). */
   getSellerOrders(): Promise<SellerOrderView[]>;
+  updateSellerProfile(input: SellerProfileInput): Promise<Seller>;
+  updateListing(productId: string, input: ListingUpdateInput): Promise<Product>;
+  /** Paused listings are hidden from the shop until resumed. Only approved/paused listings. */
+  setListingPaused(productId: string, paused: boolean): Promise<Product>;
+  deleteListing(productId: string): Promise<void>;
+  /** The seller's fulfilment of their lines in one order. */
+  updateFulfilment(orderId: string, status: FulfilmentStatus): Promise<SellerOrderView>;
 
   // ── Admin ──
   loginAdmin(email: string, password: string): Promise<AdminSession>;
@@ -56,6 +81,11 @@ export interface DataApi {
   approveListing(productId: string): Promise<Product>;
   rejectListing(productId: string, reason: string): Promise<Product>;
   getSellers(): Promise<Seller[]>;
+  /** Approve (active), reject or suspend a seller; a reason is required for reject/suspend. */
+  setSellerStatus(sellerId: string, status: SellerStatus, reason?: string): Promise<Seller>;
+  getReports(): Promise<ListingReport[]>;
+  resolveReport(reportId: string): Promise<ListingReport>;
+  getPayouts(): Promise<PayoutSummary[]>;
   getOrders(): Promise<Order[]>;
   updateOrderStatus(orderId: string, status: OrderStatus): Promise<Order>;
   getAdminOverview(): Promise<AdminOverview>;

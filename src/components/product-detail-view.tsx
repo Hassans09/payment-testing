@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { Check, Heart, ShieldCheck, ShoppingBag, Sparkles, Store, Truck } from "lucide-react";
+import { Check, Heart, ShoppingBag, Sparkles, Store } from "lucide-react";
 
 import { ProductCard } from "@/components/product-card";
+import { ProductInfoPanels, ProductReviews, RatingSummary, ReportListing } from "@/components/product-extras";
 import { initialSelection, missingSelection, ProductOptions, type ProductSelection } from "@/components/product-options";
 import { SmartImage } from "@/components/smart-image";
 import { useStore } from "@/components/store-provider";
@@ -152,13 +153,18 @@ export function ProductDetailView({ product }: { product: Product }) {
 
             <p className="flex items-center gap-1.5 text-sm text-[color:var(--brand-charcoal)]/75">
               <Store className="h-4 w-4 text-[color:var(--brand-primary)]" />
-              Sold by <span className="font-semibold text-[color:var(--brand-deep)]">{product.sellerName}</span>
+              Sold by{" "}
+              <Link href={`/sellers/${encodeURIComponent(product.sellerId)}`} className="font-semibold text-[color:var(--brand-deep)] underline decoration-[color:var(--brand-primary)] underline-offset-2 hover:text-[color:var(--brand-primary)]">
+                {product.sellerName}
+              </Link>
               {isMarketplace && (
                 <span className="ml-1 rounded-full bg-[color:var(--brand-soft)]/60 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[color:var(--brand-deep)]">
                   Marketplace seller
                 </span>
               )}
             </p>
+
+            <RatingSummary productId={product.id} />
 
             <div className="flex items-baseline gap-3">
               <span className="text-3xl font-extrabold text-[color:var(--brand-deep)]">
@@ -246,19 +252,7 @@ export function ProductDetailView({ product }: { product: Product }) {
             {error && <p className="text-xs font-semibold text-red-600">{error}</p>}
           </div>
 
-          <div className="rounded-2xl border border-[color:var(--brand-border)] bg-[color:var(--brand-cream)] p-4 space-y-2.5 text-xs text-[color:var(--brand-charcoal)]/85">
-            <div className="flex items-center gap-2 font-semibold text-[color:var(--brand-deep)]">
-              <Truck className="h-4 w-4 text-[color:var(--brand-primary)]" />
-              <span>Order Fulfillment</span>
-            </div>
-            <p className="leading-relaxed pl-6">
-              Estimated processing and shipping methods are finalized during checkout based on your delivery destination.
-            </p>
-            <div className="flex items-center gap-2 pl-6 pt-1 text-[11px] text-[color:var(--brand-charcoal)]/70">
-              <ShieldCheck className="h-3.5 w-3.5 text-[color:var(--brand-primary)]" />
-              <span>Secure checkout and order confirmation included</span>
-            </div>
-          </div>
+          <ProductInfoPanels product={product} />
 
           {/* Detailed Craftsmanship & Material Grid */}
           <div className="grid grid-cols-2 gap-3 pt-2 text-xs">
@@ -276,14 +270,22 @@ export function ProductDetailView({ product }: { product: Product }) {
             </div>
             <div className="rounded-2xl border border-[color:var(--brand-border)] bg-[color:var(--brand-white)] p-3.5">
               <span className="font-semibold uppercase tracking-wider text-[color:var(--brand-deep)]">Sold &amp; shipped by</span>
-              <p className="mt-1 text-[color:var(--brand-charcoal)]/75">{product.sellerName}</p>
+              <Link href={`/sellers/${encodeURIComponent(product.sellerId)}`} className="mt-1 block text-[color:var(--brand-charcoal)]/75 underline">
+                {product.sellerName}
+              </Link>
             </div>
           </div>
+
+          <ReportListing productId={product.id} />
         </div>
       </div>
 
+      <div className="mt-16 border-t border-[color:var(--brand-border)] pt-10">
+        <ProductReviews productId={product.id} />
+      </div>
+
       {/* Recommended Cross-Sell Products */}
-      <div className="mt-24 border-t border-[color:var(--brand-border)] pt-14">
+      <div className="mt-16 border-t border-[color:var(--brand-border)] pt-10">
         <div className="mb-8 flex items-end justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--brand-primary)]">

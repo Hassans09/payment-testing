@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import { AlertCircle, LoaderCircle, LogOut, PackageOpen, Plus, Store } from "lucide-react";
+import { LoaderCircle, LogOut, PackageOpen, Plus, Store } from "lucide-react";
 
-import { SmartImage } from "@/components/smart-image";
+import { FulfilmentControl, ListingRow, StoreProfileForm, StoreStatusBanner } from "@/components/seller-dashboard-parts";
+
 import { StatusBadge } from "@/components/status-badge";
 import { Card, StatCard, primaryButtonClass, secondaryButtonClass } from "@/components/ui/form";
 import { useAsync } from "@/hooks/use-async";
@@ -14,11 +15,13 @@ import { getSellerListings, getSellerOrders, logoutSeller } from "@/lib/api";
 import { PLATFORM_COMMISSION_PERCENT } from "@/lib/config";
 import { formatDate, formatLineOptions, formatPrice, maskAccountNumber } from "@/lib/format";
 
-type Tab = "listings" | "orders";
+type Tab = "listings" | "orders" | "profile";
+
+const PAYOUT_TEXT = { not_set_up: "Payouts set up after your first approval", pending: "Payout account being verified", active: "Payouts active", on_hold: "Payouts on hold: contact us" } as const;
 
 export default function SellerDashboardPage() {
   const router = useRouter();
-  const { seller, loading } = useSellerSession();
+  const { seller, loading, reload: reloadSeller } = useSellerSession();
   const [tab, setTab] = useState<Tab>("listings");
 
   const listings = useAsync(() => (seller ? getSellerListings() : Promise.resolve([])), [seller?.id]);
@@ -26,7 +29,8 @@ export default function SellerDashboardPage() {
 
   const stats = useMemo(() => {
     const items = listings.data ?? [];
-    const sales = (orders.data ?? []).filter((order) => order.status !== "cancelled");
+    // Earnings count paid orders only (the 90/10 split is applied per line by the server).
+    const sales = (orders.data ?? []).filter((order) => order.paid && order.status !== "cancelled");
     return {
       live: items.filter((item) => item.status === "approved").length,
       pending: items.filter((item) => item.status === "pending").length,
@@ -53,7 +57,7 @@ export default function SellerDashboardPage() {
           <h1 className="font-display mt-2 break-words text-4xl text-[color:var(--brand-deep)] sm:text-5xl">{seller.businessName}</h1>
           <p className="mt-1 text-sm text-[color:var(--brand-charcoal)]/70">
             {seller.ownerName} · Payouts to {seller.bank.bankName} {maskAccountNumber(seller.bank.accountNumber)}
-            {seller.payout?.status === "active" ? " · Payouts active" : " · Payouts set up after your first approval"}
+            {" · "}{PAYOUT_TEXT[seller.payout?.status ?? "not_set_up"]}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -73,31 +77,36 @@ export default function SellerDashboardPage() {
         </div>
       </div>
 
+      <StoreStatusBanner seller={seller} />
+
       <div className="mt-6 grid grid-cols-[repeat(2,minmax(0,1fr))] gap-3 lg:grid-cols-5">
         <StatCard label="Live listings" value={String(stats.live)} hint={`${stats.pending} pending · ${stats.rejected} rejected`} />
         <StatCard label="Orders" value={String(orders.data?.length ?? 0)} />
         <StatCard label="Gross sales" value={formatPrice(stats.gross)} />
         <StatCard label={`Commission (${PLATFORM_COMMISSION_PERCENT}%)`} value={formatPrice(stats.commission)} />
-        <div className="col-span-2 lg:col-span-1"><StatCard label="Your earnings" value={formatPrice(stats.net)} hint="Paid out to your bank account" /></div>
+        <div className="col-span-2 lg:col-span-1"><StatCard label={`Your earnings (${100 - PLATFORM_COMMISSION_PERCENT}%)`} value={formatPrice(stats.net)} hint={`Paid orders only · ${PAYOUT_TEXT[seller.payout?.status ?? "not_set_up"]}`} /></div>
       </div>
 
       <div className="mt-8 flex w-full gap-1 overflow-x-auto rounded-full border border-[color:var(--brand-border)] bg-white p-1 scrollbar-none sm:w-fit">
-        {(["listings", "orders"] as Tab[]).map((value) => (
+        {(["listings", "orders", "profile"] as Tab[]).map((value) => (
           <button
             key={value}
             type="button"
+            aria-pressed={tab === value}
             onClick={() => setTab(value)}
-            className={`min-h-10 rounded-full px-4 text-xs font-bold uppercase tracking-wider transition sm:px-5 ${
+            className={`min-h-10 shrink-0 whitespace-nowrap rounded-full px-4 text-xs font-bold uppercase tracking-wider transition sm:px-5 ${
               tab === value ? "bg-[color:var(--brand-deep)] text-white" : "text-[color:var(--brand-charcoal)]/75 hover:bg-[color:var(--brand-soft)]/50"
             }`}
           >
-            {value === "listings" ? `My listings (${listings.data?.length ?? 0})` : `Orders (${orders.data?.length ?? 0})`}
+            {value === "listings" ? `My listings (${listings.data?.length ?? 0})` : value === "orders" ? `Orders (${orders.data?.length ?? 0})` : "Store profile"}
           </button>
         ))}
       </div>
 
       <div className="mt-6">
-        {tab === "listings" ? (
+        {tab === "profile" ? (
+          <StoreProfileForm seller={seller} onSaved={() => { reloadSeller(); listings.reload(); }} />
+        ) : tab === "listings" ? (
           listings.loading && !listings.data ? (
             <LoaderCircle className="h-5 w-5 animate-spin text-[color:var(--brand-primary)]" />
           ) : (listings.data ?? []).length === 0 ? (
@@ -114,34 +123,7 @@ export default function SellerDashboardPage() {
           ) : (
             <div className="space-y-3">
               {(listings.data ?? []).map((item) => (
-                <div key={item.id} className="flex flex-col gap-4 rounded-2xl border border-[color:var(--brand-border)] bg-white p-4 sm:flex-row sm:items-center">
-                  <div className="relative h-24 w-20 shrink-0 overflow-hidden rounded-xl bg-[color:var(--brand-ivory)]">
-                    <SmartImage src={item.images[0]} alt={item.name} fill sizes="80px" className="object-cover object-top" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="text-sm font-semibold text-[color:var(--brand-deep)]">{item.name}</h3>
-                      <StatusBadge status={item.status} />
-                    </div>
-                    <p className="mt-1 text-xs text-[color:var(--brand-charcoal)]/65">
-                      {formatPrice(item.price)} · {item.stock} in stock · {item.colors.length} colour{item.colors.length === 1 ? "" : "s"} · Submitted {formatDate(item.createdAt)}
-                    </p>
-                    {item.status === "rejected" && item.rejectionReason && (
-                      <p className="mt-2 flex items-start gap-1.5 rounded-xl bg-red-50 px-3 py-2 text-xs text-red-700">
-                        <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                        <span><strong>Rejected:</strong> {item.rejectionReason}</span>
-                      </p>
-                    )}
-                    {item.status === "pending" && (
-                      <p className="mt-2 text-xs text-amber-700">Waiting for review by our team.</p>
-                    )}
-                  </div>
-                  {item.status === "approved" && (
-                    <Link href={`/product/${item.slug}`} className={secondaryButtonClass}>
-                      View in shop
-                    </Link>
-                  )}
-                </div>
+                <ListingRow key={item.id} item={item} onChanged={listings.reload} />
               ))}
             </div>
           )
@@ -177,6 +159,9 @@ export default function SellerDashboardPage() {
                   <div><dt className="text-[color:var(--brand-charcoal)]/60">Commission</dt><dd className="font-bold">− {formatPrice(order.commissionAmount)}</dd></div>
                   <div><dt className="text-[color:var(--brand-charcoal)]/60">You earn</dt><dd className="font-bold text-emerald-700">{formatPrice(order.sellerAmount)}</dd></div>
                 </dl>
+                <div className="mt-3">
+                  <FulfilmentControl order={order} onChanged={orders.reload} />
+                </div>
               </Card>
             ))}
           </div>

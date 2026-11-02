@@ -22,7 +22,8 @@ import {
 import { useStore } from "@/components/store-provider";
 import { initCheckout } from "@/lib/api";
 import { writeJSON } from "@/lib/client-storage";
-import { SHIPPING_RATES, SITE_NAME, USE_MOCK_API } from "@/lib/config";
+import { DELIVERY_ESTIMATES, SHIPPING_RATES, SITE_NAME, USE_MOCK_API } from "@/lib/config";
+import { rememberOrder } from "@/lib/my-orders";
 import { FAIRSURE_METHOD_FOR, openFairsureCheckout, resolvePublicKey, splitName, toE164Nigeria } from "@/lib/payments/fairsure";
 import { formatLineOptions, formatPrice } from "@/lib/format";
 
@@ -361,6 +362,9 @@ export default function CheckoutPage() {
       if (!init.ref || !Number.isFinite(init.amount) || init.amount <= 0) {
         throw new Error("The payment could not be started. No money has been taken. Please try again.");
       }
+
+      // Listed on /account ("Your orders") and pre-filled on /track-order.
+      rememberOrder(init.ref, form.email.trim());
 
       // Kept in this tab only, so the success page can show the items while the server confirms.
       writeJSON(
@@ -790,13 +794,13 @@ export default function CheckoutPage() {
                   {
                     id: "standard" as const,
                     title: "Standard dispatch",
-                    description: "2–4 business days",
+                    description: DELIVERY_ESTIMATES.standard,
                     price: SHIPPING_RATES.standard,
                   },
                   {
                     id: "priority" as const,
                     title: "Priority dispatch",
-                    description: "Faster processing",
+                    description: DELIVERY_ESTIMATES.priority,
                     price: SHIPPING_RATES.priority,
                   },
                 ]).map((option) => (

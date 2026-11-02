@@ -76,6 +76,9 @@ export function Catalogue({
   const [maxPrice, setMaxPrice] = useState(MAX_PRICE);
   const [refineOpen, setRefineOpen] = useState(initialGender !== "all" || initialSoldBy !== "all" || Boolean(initialSearch));
   const [pages, setPages] = useState(1);
+  const [size, setSize] = useState("");
+  const [colour, setColour] = useState("");
+  const [sellerId, setSellerId] = useState("");
   const refineId = useId();
   const categories = useNonEmptyCategories();
 
@@ -86,6 +89,22 @@ export function Catalogue({
   const { data, loading } = useAsync(() => getProducts(category ? { category } : {}), [category], initialProducts);
   const products = useMemo(() => data ?? [], [data]);
 
+  // Facets come from the products themselves, so only sizes/colours/sellers that exist are offered.
+  const facets = useMemo(() => {
+    const count = (values: string[]) => {
+      const map = new Map<string, number>();
+      for (const value of values) map.set(value, (map.get(value) ?? 0) + 1);
+      return [...map.entries()].sort((a, b) => b[1] - a[1]).map(([value]) => value);
+    };
+    const sellers = new Map<string, string>();
+    for (const product of products) if (product.sellerId !== PLATFORM_SELLER_ID) sellers.set(product.sellerId, product.sellerName);
+    return {
+      sizes: count(products.flatMap((product) => product.sizes)).slice(0, 14),
+      colours: count(products.flatMap((product) => product.colors.map((color) => color.name))).slice(0, 14),
+      sellers: [...sellers.entries()].sort((a, b) => a[1].localeCompare(b[1])),
+    };
+  }, [products]);
+
   const filteredProducts = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
 
@@ -94,6 +113,10 @@ export function Catalogue({
       const matchesSeller =
         soldBy === "all" || (soldBy === "platform" ? product.sellerId === PLATFORM_SELLER_ID : product.sellerId !== PLATFORM_SELLER_ID);
       const matchesPrice = product.price <= maxPrice;
+      const matchesOptions =
+        (!size || product.sizes.includes(size)) &&
+        (!colour || product.colors.some((color) => color.name === colour)) &&
+        (!sellerId || product.sellerId === sellerId);
       const matchesSearch =
         term.length === 0 ||
         [
@@ -109,16 +132,22 @@ export function Catalogue({
           .toLowerCase()
           .includes(term);
 
-      return matchesGender && matchesSeller && matchesPrice && matchesSearch;
+      return matchesGender && matchesSeller && matchesPrice && matchesSearch && matchesOptions;
     });
 
     return sortProducts(nextProducts, sortBy);
-  }, [products, maxPrice, searchTerm, selectedGender, soldBy, sortBy]);
+  }, [products, maxPrice, searchTerm, selectedGender, soldBy, sortBy, size, colour, sellerId]);
 
   const genderLabel = genderTabs.find((tab) => tab.value === selectedGender)?.label;
   const title = category ? categoryName(category) : "All products";
   const activeFilterCount =
-    Number(selectedGender !== "all") + Number(soldBy !== "all") + Number(Boolean(searchTerm)) + Number(maxPrice < MAX_PRICE);
+    Number(selectedGender !== "all") +
+    Number(soldBy !== "all") +
+    Number(Boolean(searchTerm)) +
+    Number(maxPrice < MAX_PRICE) +
+    Number(Boolean(size)) +
+    Number(Boolean(colour)) +
+    Number(Boolean(sellerId));
   const hasFilters = activeFilterCount > 0 || sortBy !== "discover";
   const visibleProducts = filteredProducts.slice(0, pages * PAGE_SIZE);
   const remaining = filteredProducts.length - visibleProducts.length;
@@ -129,6 +158,9 @@ export function Catalogue({
     setSearchTerm("");
     setSortBy("discover");
     setMaxPrice(MAX_PRICE);
+    setSize("");
+    setColour("");
+    setSellerId("");
     setPages(1);
   };
 
@@ -271,6 +303,29 @@ export function Catalogue({
               ))}
             </div>
             </div>
+            <div className="mb-4 grid gap-4 md:grid-cols-[repeat(2,minmax(0,1fr))]">
+              <FacetChips label="Size" values={facets.sizes} selected={size} onSelect={setSize} />
+              <FacetChips label="Colour" values={facets.colours} selected={colour} onSelect={setColour} />
+            </div>
+            {facets.sellers.length > 0 && (
+              <div className="mb-4">
+                <label htmlFor="catalogue-seller" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[color:var(--brand-deep)]">
+                  Seller
+                </label>
+                <select
+                  id="catalogue-seller"
+                  value={sellerId}
+                  onChange={(e) => setSellerId(e.target.value)}
+                  className="min-h-11 w-full rounded-2xl border border-[color:var(--brand-border)] bg-[color:var(--brand-cream)] px-3.5 text-base text-[color:var(--brand-charcoal)] sm:max-w-xs sm:text-sm"
+                >
+                  <option value="">All sellers</option>
+                  <option value={PLATFORM_SELLER_ID}>{SITE_NAME}</option>
+                  {facets.sellers.map(([id, name]) => (
+                    <option key={id} value={id}>{name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div className="grid items-end gap-4 md:grid-cols-[repeat(2,minmax(0,1fr))]">
               <div>
                 <label htmlFor="catalogue-search" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[color:var(--brand-deep)]">
@@ -321,6 +376,9 @@ export function Catalogue({
                 {soldBy !== "all" && <FilterTag>{soldByOptions.find((option) => option.value === soldBy)?.label}</FilterTag>}
                 {searchTerm && <FilterTag>&ldquo;{searchTerm}&rdquo;</FilterTag>}
                 {maxPrice < MAX_PRICE && <FilterTag>Up to {formatPrice(maxPrice)}</FilterTag>}
+                {size && <FilterTag>Size {size}</FilterTag>}
+                {colour && <FilterTag>{colour}</FilterTag>}
+                {sellerId && <FilterTag>{sellerId === PLATFORM_SELLER_ID ? SITE_NAME : facets.sellers.find(([id]) => id === sellerId)?.[1]}</FilterTag>}
                 <button
                   type="button"
                   onClick={handleReset}
@@ -400,6 +458,28 @@ export function Catalogue({
 
 function hasOtherFilters(gender: Gender | "all", search: string, maxPrice: number) {
   return gender !== "all" || Boolean(search) || maxPrice < MAX_PRICE;
+}
+
+function FacetChips({ label, values, selected, onSelect }: { label: string; values: string[]; selected: string; onSelect: (value: string) => void }) {
+  if (values.length === 0) return null;
+  return (
+    <div role="group" aria-label={label}>
+      <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[color:var(--brand-deep)]">{label}</span>
+      <div className="flex flex-wrap gap-1.5">
+        {values.map((value) => (
+          <button
+            key={value}
+            type="button"
+            aria-pressed={selected === value}
+            onClick={() => onSelect(selected === value ? "" : value)}
+            className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border px-3 text-xs font-semibold transition ${selected === value ? chipOn : chipOff}`}
+          >
+            {value}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function FilterTag({ children }: { children: React.ReactNode }) {

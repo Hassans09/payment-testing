@@ -11,6 +11,19 @@ const footerShopLinks = [
   { href: "/category/kaftans", label: `${SITE_NAME} kaftans` },
 ];
 
+const footerHelpLinks = [
+  { href: "/track-order", label: "Track your order" },
+  { href: "/help", label: "Help & FAQ" },
+  { href: "/delivery-returns", label: "Delivery & returns" },
+];
+
+const footerLegalLinks = [
+  { href: "/terms", label: "Terms" },
+  { href: "/privacy", label: "Privacy" },
+  { href: "/delivery-returns", label: "Returns" },
+  { href: "/help", label: "Contact" },
+];
+
 export function Footer() {
   return (
     <footer className="mt-24 border-t border-[color:var(--brand-border)] bg-[color:var(--brand-white)]">
@@ -46,12 +59,19 @@ export function Footer() {
           {/* Client Concierge */}
           <div className="space-y-4">
             <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-[color:var(--brand-deep)]">
-              Client Concierge
+              Help &amp; Account
             </h3>
             <ul className="space-y-2.5 text-xs text-[color:var(--brand-charcoal)]/75">
+              {footerHelpLinks.map((item) => (
+                <li key={item.href}>
+                  <Link href={item.href} className="hover:text-[color:var(--brand-primary)] transition">
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
               <li>
                 <Link href="/account" className="hover:text-[color:var(--brand-primary)] transition">
-                  Order Tracking Coming Soon
+                  Your orders
                 </Link>
               </li>
               <li>
@@ -109,6 +129,13 @@ export function Footer() {
         {/* Bottom Legal / Copyright */}
         <div className="mt-14 flex flex-col gap-3 border-t border-[color:var(--brand-border)] pt-6 text-xs text-[color:var(--brand-charcoal)]/60 sm:flex-row sm:items-center sm:justify-between">
           <p>© 2026 {SITE_NAME}. All rights reserved.</p>
+          <nav aria-label="Legal" className="flex flex-wrap gap-x-4 gap-y-1">
+            {footerLegalLinks.map((item) => (
+              <Link key={item.label} href={item.href} className="inline-flex min-h-8 items-center hover:text-[color:var(--brand-primary)] transition">
+                {item.label}
+              </Link>
+            ))}
+          </nav>
           <p className="flex items-center gap-1">
             <Lock className="h-3 w-3" />
             <span>Encrypted ecommerce platform</span>

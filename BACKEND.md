@@ -136,6 +136,25 @@ Base URL = `NEXT_PUBLIC_API_BASE_URL` (e.g. `/api/v1`). "Auth" column: — = pub
 | 23 | POST | `/orders/:reference/confirm` | — | `{ transactionRef? }` | `PaymentConfirmation` `{ status, order, message? }` | `confirmPayment` |
 | 24 | GET | `/orders/:reference` | — | – | `Order` or 404 | `getOrderByReference` |
 | 25 | POST | `/payments/fairsure/webhook` | `X-Paysure-Signature` | Fairsure event (raw JSON) | `200` within 10 s | *(backend only, section 5.4)* |
+| 26 | GET | `/sellers/:id` | — | – | `PublicSellerProfile` or 404 (only `active` stores; `platform` = the house store) | `getSellerProfile` |
+| 27 | GET | `/products/:id/reviews` | — | – | `ReviewSummary` | `getReviews` |
+| 28 | POST | `/products/:id/reviews` | — | `ReviewInput` | `ReviewSummary` (updated) | `addReview` |
+| 29 | POST | `/products/:id/reports` | — | `ReportInput` | `{ ok: true }` | `reportListing` |
+| 30 | POST | `/orders/track` | — | `{ reference, contact }` (email or phone) | `TrackedOrder` or 404 | `trackOrder` |
+| 31 | PATCH | `/sellers/me` | S | `SellerProfileInput` | `Seller` | `updateSellerProfile` |
+| 32 | PATCH | `/sellers/me/listings/:id` | S | `ListingUpdateInput` | `Product` | `updateListing` |
+| 33 | POST | `/sellers/me/listings/:id/pause` | S | – | `Product` (`paused`) | `setListingPaused(id, true)` |
+| 34 | POST | `/sellers/me/listings/:id/resume` | S | – | `Product` (`approved`) | `setListingPaused(id, false)` |
+| 35 | DELETE | `/sellers/me/listings/:id` | S | – | `204` | `deleteListing` |
+| 36 | PATCH | `/sellers/me/orders/:orderId/fulfilment` | S | `{ status: FulfilmentStatus }` | `SellerOrderView` | `updateFulfilment` |
+| 37 | PATCH | `/admin/sellers/:id/status` | A | `{ status: SellerStatus, reason? }` | `Seller` | `setSellerStatus` |
+| 38 | GET | `/admin/reports` | A | – | `ListingReport[]` (newest first) | `getReports` |
+| 39 | POST | `/admin/reports/:id/resolve` | A | – | `ListingReport` (`resolved`) | `resolveReport` |
+| 40 | GET | `/admin/payouts` | A | – | `PayoutSummary[]` (largest balance first) | `getPayouts` |
+
+Rules for #26–#40 (types, validation, who may see what) are in **section 3.3**. Server-side metadata (Open Graph,
+`sitemap.xml`) also calls #2, #3 and #26 **without auth** when `NEXT_PUBLIC_API_BASE_URL` is an absolute URL
+(`src/lib/server-catalog.ts`), so those three must be reachable from the Vercel server.
 
 `?gender=men` should also return `unisex` items. `?category=` takes one category slug.
 All TypeScript shapes are in `src/lib/types.ts`. Examples below.
@@ -348,7 +367,7 @@ and return **409** `{ "error": "Prices have changed. Please review your bag." }`
 }
 ```
 
-`OrderStatus` = `pending | paid | shipped | delivered | cancelled`. `paymentStatus` (`unpaid | paid | failed`),
+`OrderStatus` = `pending | paid | processing | shipped | delivered | cancelled`. `paymentStatus` (`unpaid | paid | failed`),
 `paymentReference` (Fairsure's `transaction_reference`) and `paidAt` are optional but recommended.
 
 Order lines carry `type` (the chosen Type value, `""` when the product has none), `color` and `size`.
@@ -403,6 +422,89 @@ The "New listing" form uploads each photo **one at a time** before submitting th
 
 ---
 
+
+
+### 3.3 Marketplace operations (#26–#40)
+
+All shapes are in `src/lib/types.ts`; the mock implementation in `src/lib/api/mock.ts` is the reference behaviour.
+
+**Seller status** — `Seller.status: SellerStatus = "pending" | "active" | "rejected" | "suspended"`, plus
+`statusReason?`, `bio?`, `logo?`, `termsAcceptedAt?`.
+
+- `POST /sellers/signup` (#4) must require `acceptTerms: true` (400 otherwise), store `termsAcceptedAt`, and create the
+  seller as **`pending`**. Pending sellers can log in and add listings; nothing of theirs is visible in the shop.
+- A product is **live** (returned by #1–#3, counted in `/categories`, purchasable in `POST /orders`) only when
+  `status = "approved"` **and** its seller is `active` (or it is a `platform` product).
+- `PATCH /admin/sellers/:id/status` (#37): `active` approves/reactivates; `rejected` and `suspended` **require a non-empty
+  `reason`** (400) which is saved as `statusReason` and shown to the seller. Suspending hides every listing at once
+  without changing each listing's own status. `POST /admin/listings/:id/approve` (#16) must answer **409** while the
+  listing's seller is not `active`.
+
+**Public seller profile** (#26) — never expose email, phone or bank details:
+
+```json
+{ "id": "sel_arewa", "businessName": "Arewa Threads", "bio": "Hand-finished kaftans from Kano.", "logo": "https://…/logo.webp", "createdAt": "2026-09-12T10:00:00.000Z" }
+```
+
+`PATCH /sellers/me` (#31) body `SellerProfileInput` `{ businessName (2–80 chars), bio (≤ 600), logo: string | null }`
+(logo = URL from `POST /uploads`). Also update `sellerName` on that seller's products.
+
+**Listing management** (#32–#35) — only the owner (`sellerId` from the token; 404 for anyone else's listing):
+
+- `ListingUpdateInput` = any of `{ name, description, price, stock }`. Validate as on create (name required, description
+  ≥ 20 chars, price > 0 whole Naira, stock ≥ 0 integer).
+- **Price and stock** changes keep the listing live. A changed **name or description** on an `approved`/`paused`
+  listing sets it back to `pending` (re-review). Any edit to a `rejected` listing clears `rejectionReason` and sets `pending`.
+- `ListingStatus` gains `"paused"`. Pause only from `approved` (400 otherwise); resume only from `paused`, back to `approved`.
+- Delete: soft-delete is recommended (orders keep their `order_items` snapshot either way); it must disappear from #2/#3.
+
+**Order fulfilment** (#36) — `FulfilmentStatus = "processing" | "shipped" | "delivered"`, stored per seller on
+`SellerSplit.fulfilment`. `OrderStatus` gains `"processing"` (paid, being prepared).
+
+- 404 unless the order contains the seller's lines; 400 unless `paymentStatus = "paid"`; 400 if `cancelled`.
+- Recompute `Order.status` after each change: all splits `delivered` → `delivered`; all `shipped`/`delivered` → `shipped`;
+  any split past `processing` → `processing`; otherwise leave `paid`.
+- The platform fulfils its own split: when an admin sets an order to `processing`/`shipped`/`delivered` (#20), set the
+  `platform` split's `fulfilment` to the same value.
+- `SellerOrderView` gains `fulfilment` and `paid` (only ship paid orders).
+
+**Order tracking for guests** (#30) — body `{ reference, contact }`. Match the reference case-insensitively, and
+`contact` against the order's email (case-insensitive) **or** phone (compare the last 10 digits, so `0803…` and
+`+234803…` match). Answer the **same 404** for "no such order" and "wrong contact" (no enumeration) and rate-limit by IP.
+Response `TrackedOrder`: `reference, status, createdAt, updatedAt, items, subtotal, shippingCost, total,
+shippingMethod, paymentStatus, city, state, fulfilment: [{ sellerName, status }]` — no street address, phone,
+email or payment details.
+
+**Reviews** (#27–#28) — `ReviewInput { name (≤ 60), rating 1–5 integer, comment (5–1000) }`; only for live products.
+`ReviewSummary { average (1 decimal), count, reviews: Review[] newest first }`, `Review { id, productId, name, rating, comment, createdAt }`.
+Rate-limit per IP/product. (The demo publishes immediately; see "Backend-only" below for moderation.)
+
+**Listing reports** (#29, #38–#39) — `ReportInput { reason: ReportReason, details (≤ 1000; ≥ 5 chars when reason = "other"), email? }`,
+`ReportReason = "counterfeit" | "wrong_info" | "offensive" | "prohibited" | "scam" | "other"`. Stored as
+`ListingReport { id, productId, productName, productSlug, sellerId, sellerName, reason, details, email?, status: "open" | "resolved", createdAt }`.
+
+**Payouts** (#40) — one `PayoutSummary` per seller:
+`{ sellerId, sellerName, bankName, accountLast4, payoutStatus, earned, paidOut, balance }`. `earned` = sum of the
+seller's `sellerAmount` (90 % at the current 10 % commission) over orders with `paymentStatus = "paid"` that are not
+`cancelled`; `paidOut` = sum of completed rows in `seller_payouts`; `balance = earned − paidOut`. Never return the full account number.
+
+**Categories** — still the fixed list in section 4, served by `GET /categories` (#1). The admin "Categories" tab
+is read-only (live/pending counts per category, computed from `/admin/products`).
+
+### 3.4 Backend-only (not in the frontend yet)
+
+These need real server work; the demo store only imitates them in the browser:
+
+- **Real buyer accounts and order history.** Today `/account` lists orders placed *on this device* (`src/lib/my-orders.ts`,
+  localStorage) and re-checks each with `/orders/track`. A real version needs buyer sign-up/login and `GET /me/orders`.
+- **Payouts to sellers.** Moving money (Fairsure split/sub-merchant or a transfer provider), writing `seller_payouts`
+  rows, and a "mark paid / send payout" admin action. `/admin/payouts` only reports balances (section 5.6).
+- **Review moderation.** Verified-purchase check, profanity/spam filtering, an admin hide/delete endpoint, and
+  optionally `pending` reviews that only appear once approved.
+- **Category management.** Adding/renaming categories from the admin (a `categories` table + endpoints). For now the
+  list is code (`CATEGORIES` in `src/lib/config.ts`) and must be changed in the frontend and the backend together.
+- Report actions beyond "resolve" (e.g. hide the listing straight from a report), and emails to sellers when their
+  store or a listing is approved, rejected or suspended.
 
 ---
 
@@ -683,6 +785,11 @@ sent for those items. **Your backend must always read prices from the database.*
 - `order_items` (id, order_id, product_id, seller_id, seller_name, slug, name, image, type, color, size, quantity, unit_price, line_total, commission_percent, commission_amount, seller_amount)
 - `webhook_events` (event_id **unique**, payload, received_at, flag) — idempotency for 5.4
 - `seller_payouts` (id, seller_id, order_id, amount, status owed/paid, transfer_reference, paid_at) — 5.6
+- `reviews` (id, product_id, name, rating 1–5, comment, status, created_at) — 3.3
+- `listing_reports` (id, product_id, seller_id, reason, details, email, status open/resolved, created_at) — 3.3
+- Extra columns: `sellers.status` (`pending`/`active`/`rejected`/`suspended`), `sellers.status_reason`, `sellers.bio`,
+  `sellers.logo`, `sellers.terms_accepted_at`; `products.status` also allows `paused`; per-seller `fulfilment` inside
+  `orders.seller_splits` (or an `order_fulfilments` table: order_id, seller_id, status, updated_at)
 
 ---
 
@@ -699,6 +806,10 @@ sent for those items. **Your backend must always read prices from the database.*
 - [ ] Sandbox end-to-end test with the test card, then switch keys + `NEXT_PUBLIC_FAIRSURE_ENV=live`
 - [ ] Upload storage domain added to `next.config.ts` → `images.remotePatterns`
 - [ ] The 30 platform products from `src/lib/seed-data.ts` imported (seller `platform`, category `kaftans`), photos uploaded
+- [ ] Endpoints #26–#40 (section 3.3); new sellers created `pending`; products only live when the seller is `active`
+- [ ] `/orders/track` and reviews/reports rate-limited
+- [ ] `NEXT_PUBLIC_SITE_URL` set to the real domain (canonical URLs, Open Graph, sitemap); `NEXT_PUBLIC_WHATSAPP_NUMBER` / `NEXT_PUBLIC_SUPPORT_EMAIL` set
+- [ ] Policy pages (`/delivery-returns`, `/terms`, `/privacy`) reviewed by the business (and ideally a lawyer)
 
 ---
 

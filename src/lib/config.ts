@@ -112,3 +112,32 @@ export const FAIRSURE_ENV: "sandbox" | "live" =
 
 /** Public key (TEST_… / LIVE_…). Optional: the checkout-init response may also return it. */
 export const FAIRSURE_PUBLIC_KEY = (process.env.NEXT_PUBLIC_FAIRSURE_PUBLIC_KEY ?? "").trim();
+
+/* ───────────── Store info & policies (shown on /help, /delivery-returns, product pages) ─────────────
+ * Edit these to match how the business actually runs. Nothing here is secret.
+ */
+
+/** Public site URL for canonical links, Open Graph, sitemap and robots (no trailing slash). */
+export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://rebel-fashion-2.vercel.app").replace(/\/+$/, "");
+
+/** Customer support email shown on /help. */
+export const SUPPORT_EMAIL = (process.env.NEXT_PUBLIC_SUPPORT_EMAIL ?? "").trim();
+
+/**
+ * WhatsApp number in international format without "+" or spaces, e.g. 2348012345678.
+ * The floating WhatsApp button and "Ask on WhatsApp" links only appear when this is set.
+ */
+export const WHATSAPP_NUMBER = (process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "").replace(/\D/g, "");
+
+export function whatsappLink(message: string): string | null {
+  return WHATSAPP_NUMBER ? `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}` : null;
+}
+
+/** Delivery estimates per shipping method (checkout and product pages use the same wording). */
+export const DELIVERY_ESTIMATES = {
+  standard: "2–4 business days",
+  priority: "Faster processing",
+} as const;
+
+/** Days after delivery during which an unworn item can be returned. */
+export const RETURN_WINDOW_DAYS = 7;

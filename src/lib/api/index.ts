@@ -67,3 +67,18 @@ export const createOrder: DataApi["createOrder"] = (...args) => api.createOrder(
 export const initCheckout: DataApi["createOrder"] = (...args) => api.createOrder(...args);
 export const confirmPayment: DataApi["confirmPayment"] = (...args) => api.confirmPayment(...args);
 export const getOrderByReference: DataApi["getOrderByReference"] = (...args) => api.getOrderByReference(...args);
+
+export const getSellerProfile: DataApi["getSellerProfile"] = (...args) => api.getSellerProfile(...args);
+export const getReviews: DataApi["getReviews"] = (...args) => api.getReviews(...args);
+export const addReview: DataApi["addReview"] = (...args) => api.addReview(...args);
+export const reportListing: DataApi["reportListing"] = (...args) => api.reportListing(...args);
+export const trackOrder: DataApi["trackOrder"] = (...args) => api.trackOrder(...args);
+export const updateSellerProfile: DataApi["updateSellerProfile"] = (...args) => api.updateSellerProfile(...args);
+export const updateListing: DataApi["updateListing"] = (...args) => api.updateListing(...args);
+export const setListingPaused: DataApi["setListingPaused"] = (...args) => api.setListingPaused(...args);
+export const deleteListing: DataApi["deleteListing"] = (...args) => api.deleteListing(...args);
+export const updateFulfilment: DataApi["updateFulfilment"] = (...args) => api.updateFulfilment(...args);
+export const setSellerStatus: DataApi["setSellerStatus"] = (...args) => api.setSellerStatus(...args);
+export const getReports: DataApi["getReports"] = (...args) => api.getReports(...args);
+export const resolveReport: DataApi["resolveReport"] = (...args) => api.resolveReport(...args);
+export const getPayouts: DataApi["getPayouts"] = (...args) => api.getPayouts(...args);

@@ -68,6 +68,7 @@ export default function SellerSignupPage() {
         email: form.email,
         password: form.password,
         bank: { bankName: form.bankName, accountNumber: form.accountNumber, accountName: form.accountName },
+        acceptTerms: form.agree,
       });
       router.push("/seller/dashboard");
     } catch (error) {
@@ -152,7 +153,7 @@ export default function SellerSignupPage() {
         <label className="flex items-start gap-3 text-sm text-[color:var(--brand-charcoal)]/80">
           <input type="checkbox" className="mt-1 h-4 w-4 accent-[color:var(--brand-deep)]" checked={form.agree} onChange={(e) => update("agree", e.target.checked)} />
           <span>
-            I agree to the seller terms, including the {PLATFORM_COMMISSION_PERCENT}% commission on each sale and that listings are reviewed before going live.
+            I agree to the <Link href="/terms#sellers" target="_blank" className="font-semibold underline">seller terms</Link>, including the {PLATFORM_COMMISSION_PERCENT}% commission on each sale and that listings are reviewed before going live.
             {errors.agree && <span className="mt-1 block text-xs font-semibold text-red-600">{errors.agree}</span>}
           </span>
         </label>

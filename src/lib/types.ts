@@ -10,8 +10,11 @@ export type { CategorySlug };
 
 export type Gender = "men" | "women" | "kids" | "unisex";
 
-/** Listing moderation status. Only "approved" products are visible in the shop. */
-export type ListingStatus = "pending" | "approved" | "rejected";
+/**
+ * Listing status. Only "approved" products are visible in the shop.
+ * "paused" = approved before, temporarily hidden by its seller (resuming makes it live again).
+ */
+export type ListingStatus = "pending" | "approved" | "rejected" | "paused";
 
 /**
  * The "Type" choice a shopper makes before adding to the bag, e.g.
@@ -103,9 +106,37 @@ export type Seller = {
    * (Fairsure split/sub-merchant once available, or a payout/transfer product such as WokPay).
    */
   payout: SellerPayout;
-  status: "active" | "suspended";
+  /**
+   * - "pending": signed up, waiting for an admin to approve the store (listings stay hidden).
+   * - "active": approved; approved listings are live.
+   * - "rejected" / "suspended": store and listings hidden; `statusReason` says why.
+   */
+  status: SellerStatus;
+  statusReason?: string;
+  /** Public store profile (shown on /sellers/[id]). */
+  bio?: string;
+  /** Logo URL (data URL in mock mode). */
+  logo?: string | null;
+  /** When the seller accepted the seller terms at signup. */
+  termsAcceptedAt?: string;
   createdAt: string;
 };
+
+export type SellerStatus = "pending" | "active" | "rejected" | "suspended";
+
+/** What shoppers see on a seller's storefront (no contact or bank details). */
+export type PublicSellerProfile = {
+  id: string;
+  businessName: string;
+  bio: string;
+  logo: string | null;
+  createdAt: string;
+};
+
+export type SellerProfileInput = { businessName: string; bio: string; logo: string | null };
+
+/** Quick edits a seller can make to a listing from the dashboard. Price/stock keep it live; a changed name/description sends a live or paused listing back to "pending". */
+export type ListingUpdateInput = Partial<Pick<Product, "name" | "description" | "price" | "stock">>;
 
 export type SellerSignupInput = {
   businessName: string;
@@ -114,6 +145,8 @@ export type SellerSignupInput = {
   email: string;
   password: string;
   bank: BankDetails;
+  /** Must be true: the seller accepted the seller terms. */
+  acceptTerms: boolean;
 };
 
 export type SellerSession = {
@@ -155,7 +188,11 @@ export type ProductFilters = {
   ids?: string[];
 };
 
-export type OrderStatus = "pending" | "paid" | "shipped" | "delivered" | "cancelled";
+/** "processing" = paid and being prepared. */
+export type OrderStatus = "pending" | "paid" | "processing" | "shipped" | "delivered" | "cancelled";
+
+/** Each seller fulfils their own lines of an order. */
+export type FulfilmentStatus = "processing" | "shipped" | "delivered";
 
 export type ShippingMethod = "standard" | "priority";
 export type PaymentMethod = "card" | "transfer";
@@ -198,6 +235,8 @@ export type SellerSplit = {
   grossAmount: number;
   commissionAmount: number;
   sellerAmount: number;
+  /** Set by the seller as they prepare and ship their part of the order. */
+  fulfilment?: FulfilmentStatus;
 };
 
 export type PaymentStatus = "unpaid" | "paid" | "failed";
@@ -299,7 +338,67 @@ export type SellerOrderView = {
   grossAmount: number;
   commissionAmount: number;
   sellerAmount: number;
+  /** This seller's fulfilment of their lines ("processing" until they update it). */
+  fulfilment: FulfilmentStatus;
+  /** Payment confirmed (the seller should only ship paid orders). */
+  paid: boolean;
 };
+
+/** A shopper's product review. */
+export type Review = {
+  id: string;
+  productId: string;
+  name: string;
+  /** 1–5 stars. */
+  rating: number;
+  comment: string;
+  createdAt: string;
+};
+
+export type ReviewInput = { name: string; rating: number; comment: string };
+
+export type ReviewSummary = { average: number; count: number; reviews: Review[] };
+
+export type ReportReason = "counterfeit" | "wrong_info" | "offensive" | "prohibited" | "scam" | "other";
+
+export type ListingReport = {
+  id: string;
+  productId: string;
+  productName: string;
+  productSlug: string;
+  sellerId: string;
+  sellerName: string;
+  reason: ReportReason;
+  details: string;
+  /** Optional contact so the team can follow up. */
+  email?: string;
+  status: "open" | "resolved";
+  createdAt: string;
+};
+
+export type ReportInput = { reason: ReportReason; details: string; email?: string };
+
+/** What a seller is owed and how their payouts stand (GET /admin/payouts). */
+export type PayoutSummary = {
+  sellerId: string;
+  sellerName: string;
+  bankName: string;
+  /** Last 4 digits only. */
+  accountLast4: string;
+  payoutStatus: PayoutStatus;
+  /** Seller share (90%) of paid, non-cancelled orders. */
+  earned: number;
+  /** Already transferred to the seller (from the backend's payout records). */
+  paidOut: number;
+  /** earned - paidOut. */
+  balance: number;
+};
+
+/** Order lookup result for /track-order (no payment details). */
+export type TrackedOrder = Pick<
+  Order,
+  "reference" | "status" | "createdAt" | "updatedAt" | "items" | "subtotal" | "shippingCost" | "total" | "shippingMethod" | "paymentStatus"
+> & { city: string; state: string; fulfilment: { sellerName: string; status: FulfilmentStatus }[] };
 
 /** One category with how many APPROVED products it has (GET /categories). */
 export type CategorySummary = {

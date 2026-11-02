@@ -10,6 +10,11 @@ import { API_BASE_URL } from "@/lib/config";
 import { readString, removeKey, writeString } from "@/lib/client-storage";
 import { compressImageToFile } from "@/lib/image-compress";
 import type {
+  ListingReport,
+  PayoutSummary,
+  PublicSellerProfile,
+  ReviewSummary,
+  TrackedOrder,
   AdminOverview,
   AdminSession,
   CategorySummary,
@@ -85,6 +90,28 @@ export const httpApi: DataApi = {
       throw error;
     }
   },
+  async getSellerProfile(sellerId) {
+    try {
+      return await request<PublicSellerProfile>(`/sellers/${encodeURIComponent(sellerId)}`);
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 404) return null;
+      throw error;
+    }
+  },
+  getReviews: (productId) => request<ReviewSummary>(`/products/${encodeURIComponent(productId)}/reviews`),
+  addReview: (productId, input) =>
+    request<ReviewSummary>(`/products/${encodeURIComponent(productId)}/reviews`, { method: "POST", body: input }),
+  async reportListing(productId, input) {
+    await request<unknown>(`/products/${encodeURIComponent(productId)}/reports`, { method: "POST", body: input });
+  },
+  async trackOrder(reference, emailOrPhone) {
+    try {
+      return await request<TrackedOrder>("/orders/track", { method: "POST", body: { reference, contact: emailOrPhone } });
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 404) return null;
+      throw error;
+    }
+  },
 
   // Sellers
   async createSeller(input) {
@@ -124,6 +151,20 @@ export const httpApi: DataApi = {
     return result.url;
   },
   getSellerOrders: () => request<SellerOrderView[]>("/sellers/me/orders", { auth: "seller" }),
+  updateSellerProfile: (input) => request<Seller>("/sellers/me", { method: "PATCH", body: input, auth: "seller" }),
+  updateListing: (id, input) =>
+    request<Product>(`/sellers/me/listings/${encodeURIComponent(id)}`, { method: "PATCH", body: input, auth: "seller" }),
+  setListingPaused: (id, paused) =>
+    request<Product>(`/sellers/me/listings/${encodeURIComponent(id)}/${paused ? "pause" : "resume"}`, { method: "POST", auth: "seller" }),
+  async deleteListing(id) {
+    await request<unknown>(`/sellers/me/listings/${encodeURIComponent(id)}`, { method: "DELETE", auth: "seller" });
+  },
+  updateFulfilment: (orderId, status) =>
+    request<SellerOrderView>(`/sellers/me/orders/${encodeURIComponent(orderId)}/fulfilment`, {
+      method: "PATCH",
+      body: { status },
+      auth: "seller",
+    }),
 
   // Admin
   async loginAdmin(email, password) {
@@ -149,6 +190,11 @@ export const httpApi: DataApi = {
   rejectListing: (id, reason) =>
     request<Product>(`/admin/listings/${encodeURIComponent(id)}/reject`, { method: "POST", body: { reason }, auth: "admin" }),
   getSellers: () => request<Seller[]>("/admin/sellers", { auth: "admin" }),
+  setSellerStatus: (sellerId, status, reason) =>
+    request<Seller>(`/admin/sellers/${encodeURIComponent(sellerId)}/status`, { method: "PATCH", body: { status, reason }, auth: "admin" }),
+  getReports: () => request<ListingReport[]>("/admin/reports", { auth: "admin" }),
+  resolveReport: (id) => request<ListingReport>(`/admin/reports/${encodeURIComponent(id)}/resolve`, { method: "POST", auth: "admin" }),
+  getPayouts: () => request<PayoutSummary[]>("/admin/payouts", { auth: "admin" }),
   getOrders: () => request<Order[]>("/admin/orders", { auth: "admin" }),
   updateOrderStatus: (id, status) =>
     request<Order>(`/admin/orders/${encodeURIComponent(id)}`, { method: "PATCH", body: { status }, auth: "admin" }),

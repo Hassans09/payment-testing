@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Check, ChevronDown, LoaderCircle, LogOut, ShieldCheck, X } from "lucide-react";
 
+import { CategoriesPanel, PayoutsPanel, ReportsPanel, SellerStatusActions } from "@/components/admin-parts";
 import { SmartImage } from "@/components/smart-image";
 import { StatusBadge } from "@/components/status-badge";
 import { Card, StatCard, inputClass, primaryButtonClass, secondaryButtonClass } from "@/components/ui/form";
@@ -15,7 +16,9 @@ import {
   getAdminOverview,
   getAllProducts,
   getOrders,
+  getPayouts,
   getPendingListings,
+  getReports,
   getSellers,
   logoutAdmin,
   rejectListing,
@@ -25,8 +28,8 @@ import { PLATFORM_COMMISSION_PERCENT, PLATFORM_SELLER_ID, SITE_NAME, categoryNam
 import { formatDate, formatLineOptions, formatPrice, maskAccountNumber } from "@/lib/format";
 import type { Order, OrderStatus, PayoutStatus, Product } from "@/lib/types";
 
-type Tab = "overview" | "pending" | "products" | "sellers" | "orders";
-const ORDER_STATUSES: OrderStatus[] = ["pending", "paid", "shipped", "delivered", "cancelled"];
+type Tab = "overview" | "pending" | "products" | "sellers" | "orders" | "payouts" | "reports" | "categories";
+const ORDER_STATUSES: OrderStatus[] = ["pending", "paid", "processing", "shipped", "delivered", "cancelled"];
 
 const PAYOUT_LABELS: Record<PayoutStatus, string> = {
   not_set_up: "Not set up (on first approval)",
@@ -47,6 +50,8 @@ export default function AdminDashboardPage() {
   const products = useAsync(() => (enabled ? getAllProducts() : Promise.resolve([])), [enabled, refreshKey]);
   const sellers = useAsync(() => (enabled ? getSellers() : Promise.resolve([])), [enabled, refreshKey]);
   const orders = useAsync(() => (enabled ? getOrders() : Promise.resolve([])), [enabled, refreshKey]);
+  const payouts = useAsync(() => (enabled ? getPayouts() : Promise.resolve([])), [enabled, refreshKey]);
+  const reports = useAsync(() => (enabled ? getReports() : Promise.resolve([])), [enabled, refreshKey]);
 
   const refresh = () => setRefreshKey((value) => value + 1);
 
@@ -62,8 +67,11 @@ export default function AdminDashboardPage() {
     { value: "overview", label: "Overview" },
     { value: "pending", label: `Pending (${pending.data?.length ?? 0})` },
     { value: "products", label: `All products (${products.data?.length ?? 0})` },
-    { value: "sellers", label: `Sellers (${sellers.data?.length ?? 0})` },
+    { value: "sellers", label: `Sellers (${sellers.data?.length ?? 0}${(sellers.data ?? []).some((x) => x.status === "pending") ? ", new" : ""})` },
     { value: "orders", label: `Orders (${orders.data?.length ?? 0})` },
+    { value: "payouts", label: "Payouts" },
+    { value: "reports", label: `Reports (${(reports.data ?? []).filter((r) => r.status === "open").length})` },
+    { value: "categories", label: "Categories" },
   ];
 
   const o = overview.data;
@@ -93,8 +101,9 @@ export default function AdminDashboardPage() {
           <button
             key={item.value}
             type="button"
+            aria-pressed={tab === item.value}
             onClick={() => setTab(item.value)}
-            className={`min-h-10 shrink-0 rounded-full px-4 text-xs font-bold uppercase tracking-wider transition ${
+            className={`min-h-10 shrink-0 whitespace-nowrap rounded-full px-4 text-xs font-bold uppercase tracking-wider transition ${
               tab === item.value ? "bg-[color:var(--brand-deep)] text-white" : "text-[color:var(--brand-charcoal)]/75 hover:bg-[color:var(--brand-soft)]/50"
             }`}
           >
@@ -223,7 +232,6 @@ export default function AdminDashboardPage() {
                         <h3 className="font-display text-2xl text-[color:var(--brand-deep)]">{seller.businessName}</h3>
                         <p className="text-xs text-[color:var(--brand-charcoal)]/65">{seller.ownerName} · Joined {formatDate(seller.createdAt)}</p>
                       </div>
-                      <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-emerald-800">{seller.status}</span>
                     </div>
                     <dl className="mt-4 grid grid-cols-[repeat(2,minmax(0,1fr))] gap-3 text-xs">
                       <div><dt className="text-[color:var(--brand-charcoal)]/55">Email</dt><dd className="break-all font-semibold">{seller.email}</dd></div>
@@ -238,12 +246,17 @@ export default function AdminDashboardPage() {
                         </dd>
                       </div>
                     </dl>
+                    <SellerStatusActions seller={seller} onChanged={refresh} />
                   </Card>
                 );
               })}
             </div>
           )
         )}
+
+        {tab === "payouts" && (payouts.loading && !payouts.data ? <Spinner /> : <PayoutsPanel rows={payouts.data ?? []} />)}
+        {tab === "reports" && (reports.loading && !reports.data ? <Spinner /> : <ReportsPanel reports={reports.data ?? []} onChanged={refresh} />)}
+        {tab === "categories" && (products.loading && !products.data ? <Spinner /> : <CategoriesPanel products={products.data ?? []} />)}
 
         {tab === "orders" && (
           orders.loading && !orders.data ? <Spinner /> : (orders.data ?? []).length === 0 ? (

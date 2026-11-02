@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { LoaderCircle, LogOut, PackageOpen, Plus, Store } from "lucide-react";
 
-import { FulfilmentControl, ListingRow, StoreProfileForm, StoreStatusBanner } from "@/components/seller-dashboard-parts";
+import { DeleteAccountPanel, FulfilmentControl, ListingRow, StoreProfileForm, StoreStatusBanner } from "@/components/seller-dashboard-parts";
 
 import { StatusBadge } from "@/components/status-badge";
 import { Card, StatCard, primaryButtonClass, secondaryButtonClass } from "@/components/ui/form";
@@ -105,7 +105,10 @@ export default function SellerDashboardPage() {
 
       <div className="mt-6">
         {tab === "profile" ? (
-          <StoreProfileForm seller={seller} onSaved={() => { reloadSeller(); listings.reload(); }} />
+          <>
+            <StoreProfileForm seller={seller} onSaved={() => { reloadSeller(); listings.reload(); }} />
+            <DeleteAccountPanel onDeleted={() => { window.location.assign("/?account=deleted"); }} />
+          </>
         ) : tab === "listings" ? (
           listings.loading && !listings.data ? (
             <LoaderCircle className="h-5 w-5 animate-spin text-[color:var(--brand-primary)]" />

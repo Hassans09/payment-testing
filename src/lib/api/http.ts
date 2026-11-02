@@ -151,6 +151,10 @@ export const httpApi: DataApi = {
     return result.url;
   },
   getSellerOrders: () => request<SellerOrderView[]>("/sellers/me/orders", { auth: "seller" }),
+  async deleteMyAccount(password) {
+    await request<unknown>("/sellers/me", { method: "DELETE", body: { password }, auth: "seller" });
+    removeKey(SELLER_TOKEN_KEY);
+  },
   updateSellerProfile: (input) => request<Seller>("/sellers/me", { method: "PATCH", body: input, auth: "seller" }),
   updateListing: (id, input) =>
     request<Product>(`/sellers/me/listings/${encodeURIComponent(id)}`, { method: "PATCH", body: input, auth: "seller" }),
@@ -192,6 +196,9 @@ export const httpApi: DataApi = {
   getSellers: () => request<Seller[]>("/admin/sellers", { auth: "admin" }),
   setSellerStatus: (sellerId, status, reason) =>
     request<Seller>(`/admin/sellers/${encodeURIComponent(sellerId)}/status`, { method: "PATCH", body: { status, reason }, auth: "admin" }),
+  async deleteSeller(sellerId) {
+    await request<unknown>(`/admin/sellers/${encodeURIComponent(sellerId)}`, { method: "DELETE", auth: "admin" });
+  },
   getReports: () => request<ListingReport[]>("/admin/reports", { auth: "admin" }),
   resolveReport: (id) => request<ListingReport>(`/admin/reports/${encodeURIComponent(id)}/resolve`, { method: "POST", auth: "admin" }),
   getPayouts: () => request<PayoutSummary[]>("/admin/payouts", { auth: "admin" }),

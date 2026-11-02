@@ -125,6 +125,16 @@ function saveDb(db: MockDb) {
   }
 }
 
+/** Removes a seller, their listings and the reviews/reports on those listings. Orders stay as records. */
+function removeSeller(db: MockDb, sellerId: string) {
+  const productIds = new Set(db.products.filter((item) => item.sellerId === sellerId).map((item) => item.id));
+  db.products = db.products.filter((item) => item.sellerId !== sellerId);
+  db.reviews = db.reviews.filter((item) => !productIds.has(item.productId));
+  db.reports = db.reports.filter((item) => !productIds.has(item.productId));
+  db.sellers = db.sellers.filter((item) => item.id !== sellerId);
+  if (db.sellerSession?.sellerId === sellerId) db.sellerSession = null;
+}
+
 function delay<T>(value: T): Promise<T> {
   return new Promise((resolve) => setTimeout(() => resolve(value), MOCK_API_DELAY_MS));
 }
@@ -498,6 +508,18 @@ export const mockApi: DataApi = {
     return compressImageToDataUrl(file);
   },
 
+  async deleteMyAccount(password) {
+    const db = loadDb();
+    const seller = requireSeller(db);
+    if (seller.passwordHash !== weakHash(password)) {
+      await delay(null);
+      throw new ApiError("That password isn't right.", 401);
+    }
+    removeSeller(db, seller.id);
+    saveDb(db);
+    return delay(undefined);
+  },
+
   async updateSellerProfile(input) {
     const db = loadDb();
     const seller = requireSeller(db);
@@ -678,6 +700,15 @@ export const mockApi: DataApi = {
     seller.statusReason = status === "active" || status === "pending" ? undefined : reason?.trim();
     saveDb(db);
     return delay(publicSeller(seller));
+  },
+
+  async deleteSeller(sellerId) {
+    const db = loadDb();
+    requireAdmin(db);
+    if (!db.sellers.some((item) => item.id === sellerId)) throw new ApiError("Seller not found.", 404);
+    removeSeller(db, sellerId);
+    saveDb(db);
+    return delay(undefined);
   },
 
   async getReports() {

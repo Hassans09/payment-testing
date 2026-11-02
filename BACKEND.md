@@ -151,6 +151,8 @@ Base URL = `NEXT_PUBLIC_API_BASE_URL` (e.g. `/api/v1`). "Auth" column: — = pub
 | 38 | GET | `/admin/reports` | A | – | `ListingReport[]` (newest first) | `getReports` |
 | 39 | POST | `/admin/reports/:id/resolve` | A | – | `ListingReport` (`resolved`) | `resolveReport` |
 | 40 | GET | `/admin/payouts` | A | – | `PayoutSummary[]` (largest balance first) | `getPayouts` |
+| 41 | DELETE | `/sellers/me` | S | `{ password }` | `204` (401 if the password is wrong) | `deleteMyAccount` |
+| 42 | DELETE | `/admin/sellers/:id` | A | – | `204` | `deleteSeller` |
 
 Rules for #26–#40 (types, validation, who may see what) are in **section 3.3**. Server-side metadata (Open Graph,
 `sitemap.xml`) also calls #2, #3 and #26 **without auth** when `NEXT_PUBLIC_API_BASE_URL` is an absolute URL
@@ -490,6 +492,10 @@ seller's `sellerAmount` (90 % at the current 10 % commission) over orders with `
 
 **Categories** — still the fixed list in section 4, served by `GET /categories` (#1). The admin "Categories" tab
 is read-only (live/pending counts per category, computed from `/admin/products`).
+
+### 3.3.1 Deleting a seller (#41, #42)
+
+A seller can delete their own account (password required) and the admin can delete any seller. Delete the seller, their listings and the reviews/reports on those listings, and end their sessions. Keep past orders and payout records (the order lines already carry the seller name and amounts). If a seller still has unpaid earnings, settle or hold them before deleting.
 
 ### 3.4 Backend-only (not in the frontend yet)
 

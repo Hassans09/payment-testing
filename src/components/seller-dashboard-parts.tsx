@@ -7,7 +7,7 @@ import { AlertCircle, ImagePlus, LoaderCircle, Pause, Pencil, Play, Store, Trash
 import { SmartImage } from "@/components/smart-image";
 import { StatusBadge } from "@/components/status-badge";
 import { inputClass, primaryButtonClass, secondaryButtonClass } from "@/components/ui/form";
-import { deleteListing, setListingPaused, updateFulfilment, updateListing, updateSellerProfile, uploadListingImage } from "@/lib/api";
+import { deleteListing, deleteMyAccount, setListingPaused, updateFulfilment, updateListing, updateSellerProfile, uploadListingImage } from "@/lib/api";
 import { formatDate, formatPrice } from "@/lib/format";
 import { PHOTO_ACCEPT } from "@/lib/image-utils";
 import type { FulfilmentStatus, ListingUpdateInput, Product, Seller, SellerOrderView } from "@/lib/types";
@@ -244,5 +244,52 @@ export function StoreProfileForm({ seller, onSaved }: { seller: Seller; onSaved:
         {seller.status === "active" && <Link href={`/sellers/${seller.id}`} className={secondaryButtonClass}>View my store</Link>}
       </div>
     </form>
+  );
+}
+
+/** Lets a seller permanently delete their own account. Asks for their password first. */
+export function DeleteAccountPanel({ onDeleted }: { onDeleted: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  async function onConfirm(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setBusy(true);
+    setError("");
+    try {
+      await deleteMyAccount(password);
+      onDeleted();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't delete your account.");
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="mt-6 rounded-3xl border border-red-200 bg-white p-5 sm:p-6">
+      <h2 className="text-sm font-bold uppercase tracking-wider text-red-700">Delete account</h2>
+      <p className="mt-1 text-sm text-[color:var(--brand-charcoal)]/75">
+        This removes your store and all your listings for good. It can&apos;t be undone. Orders you already received stay on record.
+      </p>
+      {!open ? (
+        <button type="button" className={`${smallButton} mt-3 border-red-200 text-red-700`} onClick={() => setOpen(true)}>
+          <Trash2 className="h-3.5 w-3.5" aria-hidden="true" /> Delete my account
+        </button>
+      ) : (
+        <form onSubmit={onConfirm} noValidate className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end">
+          <div className="flex-1">
+            <label htmlFor="delete-password" className="text-xs font-semibold uppercase tracking-wider text-[color:var(--brand-deep)]">Enter your password to confirm</label>
+            <input id="delete-password" type="password" autoComplete="current-password" className={inputClass} value={password} onChange={(e) => setPassword(e.target.value)} />
+          </div>
+          <button type="submit" disabled={busy || !password} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-red-600 px-5 text-xs font-bold uppercase tracking-wider text-white disabled:opacity-50">
+            {busy && <LoaderCircle className="h-4 w-4 animate-spin" />} Delete forever
+          </button>
+          <button type="button" className={smallButton} onClick={() => { setOpen(false); setPassword(""); setError(""); }}>Cancel</button>
+        </form>
+      )}
+      {error && <p role="alert" className="mt-2 text-xs font-semibold text-red-700">{error}</p>}
+    </section>
   );
 }

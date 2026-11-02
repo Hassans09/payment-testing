@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Check, LoaderCircle } from "lucide-react";
+import { Check, LoaderCircle, Trash2 } from "lucide-react";
 
 import { StatusBadge } from "@/components/status-badge";
 import { Card, inputClass } from "@/components/ui/form";
-import { resolveReport, setSellerStatus } from "@/lib/api";
+import { deleteSeller, resolveReport, setSellerStatus } from "@/lib/api";
 import { CATEGORIES } from "@/lib/config";
 import { formatDate, formatPrice } from "@/lib/format";
 import type { ListingReport, PayoutStatus, PayoutSummary, Product, Seller, SellerStatus } from "@/lib/types";
@@ -20,6 +20,21 @@ export function SellerStatusActions({ seller, onChanged }: { seller: Seller; onC
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  async function remove() {
+    setBusy(true);
+    setError("");
+    try {
+      await deleteSeller(seller.id);
+      setConfirmDelete(false);
+      onChanged();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't delete the seller.");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function apply(status: SellerStatus, why?: string) {
     setBusy(true);
@@ -53,7 +68,21 @@ export function SellerStatusActions({ seller, onChanged }: { seller: Seller; onC
         {seller.status === "active" && (
           <button type="button" disabled={busy} className={`${smallButton} text-red-700`} onClick={() => setPendingAction("suspended")}>Suspend</button>
         )}
+        <button type="button" disabled={busy} className={`${smallButton} text-red-700`} onClick={() => { setPendingAction(null); setConfirmDelete(true); }}>
+          <Trash2 className="h-3.5 w-3.5" aria-hidden="true" /> Delete
+        </button>
       </div>
+      {confirmDelete && (
+        <div role="alertdialog" aria-label="Delete seller" className="mt-3 rounded-2xl bg-red-50 p-3 text-sm text-red-800">
+          <p>Delete <strong>{seller.businessName}</strong> and all their listings for good? Past orders stay on record. This can&apos;t be undone.</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button type="button" disabled={busy} className="inline-flex min-h-11 items-center gap-2 rounded-full bg-red-600 px-5 text-xs font-bold uppercase tracking-wider text-white disabled:opacity-50" onClick={remove}>
+              {busy && <LoaderCircle className="h-4 w-4 animate-spin" />} Delete seller
+            </button>
+            <button type="button" className={smallButton} onClick={() => setConfirmDelete(false)}>Cancel</button>
+          </div>
+        </div>
+      )}
       {pendingAction && (
         <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end">
           <div className="flex-1">

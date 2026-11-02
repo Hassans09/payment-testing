@@ -77,6 +77,8 @@ export const updateSellerProfile: DataApi["updateSellerProfile"] = (...args) => 
 export const updateListing: DataApi["updateListing"] = (...args) => api.updateListing(...args);
 export const setListingPaused: DataApi["setListingPaused"] = (...args) => api.setListingPaused(...args);
 export const deleteListing: DataApi["deleteListing"] = (...args) => api.deleteListing(...args);
+export const deleteMyAccount: DataApi["deleteMyAccount"] = (...args) => api.deleteMyAccount(...args);
+export const deleteSeller: DataApi["deleteSeller"] = (...args) => api.deleteSeller(...args);
 export const updateFulfilment: DataApi["updateFulfilment"] = (...args) => api.updateFulfilment(...args);
 export const setSellerStatus: DataApi["setSellerStatus"] = (...args) => api.setSellerStatus(...args);
 export const getReports: DataApi["getReports"] = (...args) => api.getReports(...args);

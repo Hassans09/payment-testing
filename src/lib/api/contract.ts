@@ -64,6 +64,8 @@ export interface DataApi {
   /** Orders that contain the signed-in seller's products (their lines only). */
   getSellerOrders(): Promise<SellerOrderView[]>;
   updateSellerProfile(input: SellerProfileInput): Promise<Seller>;
+  /** Permanently deletes the signed-in seller's account and listings. Needs their password. */
+  deleteMyAccount(password: string): Promise<void>;
   updateListing(productId: string, input: ListingUpdateInput): Promise<Product>;
   /** Paused listings are hidden from the shop until resumed. Only approved/paused listings. */
   setListingPaused(productId: string, paused: boolean): Promise<Product>;
@@ -83,6 +85,8 @@ export interface DataApi {
   getSellers(): Promise<Seller[]>;
   /** Approve (active), reject or suspend a seller; a reason is required for reject/suspend. */
   setSellerStatus(sellerId: string, status: SellerStatus, reason?: string): Promise<Seller>;
+  /** Permanently deletes a seller account and its listings. Past orders are kept for records. */
+  deleteSeller(sellerId: string): Promise<void>;
   getReports(): Promise<ListingReport[]>;
   resolveReport(reportId: string): Promise<ListingReport>;
   getPayouts(): Promise<PayoutSummary[]>;

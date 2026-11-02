@@ -17,7 +17,7 @@
 import { PLATFORM_SELLER_ID, SITE_NAME } from "@/lib/config";
 import type { Product } from "@/lib/types";
 
-export const SEED_VERSION = 4;
+export const SEED_VERSION = 5;
 
 const MEN_SIZES = ["S", "M", "L", "XL", "XXL", "3XL"];
 const WOMEN_SIZES = ["XS", "S", "M", "L", "XL", "XXL"];

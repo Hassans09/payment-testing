@@ -1,44 +1,79 @@
+"use client";
 
 import Link from "next/link";
-import { ArrowLeft, PackageSearch, ShieldCheck } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ChevronRight, LoaderCircle, PackageSearch } from "lucide-react";
 
+import { OrderTracker } from "@/components/order-tracker";
+import { StatusBadge } from "@/components/status-badge";
+import { trackOrder } from "@/lib/api";
+import { formatPrice } from "@/lib/format";
+import { readMyOrders } from "@/lib/my-orders";
+import type { TrackedOrder } from "@/lib/types";
+
+/**
+ * Guest "account": the orders placed in this browser (no sign-up needed) plus order tracking.
+ * With a real backend, signed-in shoppers would load GET /me/orders here (see BACKEND.md).
+ */
 export default function AccountPage() {
+  const [orders, setOrders] = useState<TrackedOrder[] | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const refs = readMyOrders();
+    Promise.all(refs.map((ref) => trackOrder(ref.reference, ref.contact).catch(() => null))).then((found) => {
+      if (!cancelled) setOrders(found.filter((order): order is TrackedOrder => Boolean(order)));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
-    <main className="mx-auto flex min-h-[60vh] max-w-3xl items-center justify-center px-4 py-16 sm:px-6">
-      <section className="w-full rounded-[30px] border border-[color:var(--brand-border)] bg-white p-8 text-center shadow-[0_16px_35px_rgba(91,64,50,0.05)] sm:p-12">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[color:var(--brand-cream)]">
-          <PackageSearch className="h-8 w-8 text-[color:var(--brand-primary)]" />
-        </div>
+    <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-12">
+      <span className="eyebrow">Account</span>
+      <h1 className="font-display mt-2 text-3xl text-[color:var(--brand-deep)] sm:text-5xl">Your orders</h1>
+      <p className="mt-2 text-sm text-[color:var(--brand-charcoal)]/70">Orders placed on this device. No account needed.</p>
 
-        <p className="mt-6 text-xs font-bold uppercase tracking-[0.2em] text-[color:var(--brand-primary)]">
-          Rebel Fashion
-        </p>
-
-        <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-[color:var(--brand-deep)] sm:text-4xl">
-          Order Tracking
-        </h1>
-
-        <p className="mx-auto mt-4 max-w-lg text-sm leading-7 text-[color:var(--brand-charcoal)]/70">
-          Guest order tracking is coming soon. We’re preparing a secure way
-          for you to check your order status without creating an account.
-        </p>
-
-        <div className="mx-auto mt-6 flex max-w-md items-start gap-3 rounded-2xl border border-[color:var(--brand-border)] bg-[color:var(--brand-cream)] p-4 text-left">
-          <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-[color:var(--brand-primary)]" />
-          <p className="text-xs leading-6 text-[color:var(--brand-charcoal)]/75">
-            Your order details should only be accessible to you through a
-            secure verification process.
-          </p>
-        </div>
-
-        <Link
-          href="/shop"
-          className="mt-8 inline-flex items-center justify-center gap-2 rounded-full bg-[color:var(--brand-deep)] px-7 py-3 text-xs font-bold uppercase tracking-wider text-white transition hover:opacity-90"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Continue Shopping
-        </Link>
+      <section aria-label="Orders on this device" className="mt-6">
+        {orders === null ? (
+          <div className="flex justify-center py-8"><LoaderCircle className="h-6 w-6 animate-spin text-[color:var(--brand-primary)]" /></div>
+        ) : orders.length === 0 ? (
+          <div className="rounded-3xl border border-dashed border-[color:var(--brand-border)] bg-white p-6 text-center text-sm text-[color:var(--brand-charcoal)]/70">
+            <PackageSearch className="mx-auto h-7 w-7 text-[color:var(--brand-primary)]" />
+            <p className="mt-2">No orders on this device yet. Ordered on another phone? Track it below.</p>
+          </div>
+        ) : (
+          <ul className="divide-y divide-[color:var(--brand-border)] rounded-3xl border border-[color:var(--brand-border)] bg-white">
+            {orders.map((order) => (
+              <li key={order.reference}>
+                <Link href={`/track-order?ref=${encodeURIComponent(order.reference)}`} className="flex min-h-16 items-center gap-3 px-4 py-3 hover:bg-[color:var(--brand-cream)]">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-bold text-[color:var(--brand-deep)]">{order.reference}</p>
+                    <p className="text-xs text-[color:var(--brand-charcoal)]/60">
+                      {new Date(order.createdAt).toLocaleDateString("en-NG", { dateStyle: "medium" })} · {order.items.length} item{order.items.length === 1 ? "" : "s"} · {formatPrice(order.total)}
+                    </p>
+                  </div>
+                  <StatusBadge status={order.status} />
+                  <ChevronRight className="h-4 w-4 shrink-0 text-[color:var(--brand-charcoal)]/40" aria-hidden="true" />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
-    </main>
+
+      <section aria-labelledby="track-title" className="mt-10">
+        <h2 id="track-title" className="mb-3 text-lg font-bold text-[color:var(--brand-deep)]">Track another order</h2>
+        <OrderTracker />
+      </section>
+
+      <p className="mt-10 text-xs text-[color:var(--brand-charcoal)]/65">
+        Selling clothes?{" "}
+        <Link href="/seller/login" className="font-semibold text-[color:var(--brand-deep)] underline">Seller login</Link>
+        {" · "}
+        <Link href="/sell" className="font-semibold text-[color:var(--brand-deep)] underline">Open a store</Link>
+      </p>
+    </div>
   );
 }

@@ -2,6 +2,13 @@
 
 import { useSyncExternalStore } from "react";
 
+import { SITE_NAME } from "@/lib/config";
+
+const [firstWord, ...restWords] = SITE_NAME.split(" ");
+const secondWord = restWords.join(" ");
+// Rough width of the first word in the SVG so the script word sits after it.
+const secondX = Math.round(firstWord.length * 30 + 48);
+
 function subscribeReducedMotion(callback: () => void) {
   if (typeof window === "undefined" || !window.matchMedia) {
     return () => {};
@@ -34,13 +41,13 @@ export default function AnimatedLogo({ className = "" }: { className?: string })
 
   return (
     <div className={`store-wordmark ${className}`} aria-hidden={false}>
-      <span className="sr-only">RebelFashion</span>
+      <span className="sr-only">{SITE_NAME}</span>
 
       <svg
         viewBox="0 0 420 64"
         className="h-8 sm:h-10 md:h-12 w-auto"
         role="img"
-        aria-label="Storefront"
+        aria-label={SITE_NAME}
         xmlns="http://www.w3.org/2000/svg"
       >
         <defs>
@@ -56,8 +63,8 @@ export default function AnimatedLogo({ className = "" }: { className?: string })
           </style>
         </defs>
 
-        <text x="0" y="42" className="rm-store" fill="url(#brand-grad)">REBEL</text>
-        <text x="198" y="54" className="rm-front" fill="var(--brand-chocolate)">Fashion</text>
+        <text x="0" y="42" className="rm-store" fill="url(#brand-grad)">{firstWord.toUpperCase()}</text>
+        <text x={secondX} y="54" className="rm-front" fill="var(--brand-chocolate)">{secondWord}</text>
         <path
           d="M6 56 C60 70 140 66 190 52 C240 38 320 46 414 56"
           fill="none"

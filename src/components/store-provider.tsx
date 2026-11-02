@@ -14,7 +14,9 @@ import {
 import Link from "next/link";
 import { CheckCircle2, X } from "lucide-react";
 
-import { type Product } from "@/lib/store-data";
+import { readJSON, writeJSON } from "@/lib/client-storage";
+import { PLATFORM_SELLER_ID } from "@/lib/config";
+import type { Product } from "@/lib/types";
 
 export type CartItem = {
   id: string;
@@ -23,13 +25,18 @@ export type CartItem = {
   name: string;
   image: string;
   price: number;
+  /** Chosen Type value (e.g. "Long"); "" when the product has no Type option. */
+  type: string;
   color: string;
   size: string;
   quantity: number;
+  sellerId: string;
+  sellerName: string;
 };
 
 type AddToCartInput = {
   product: Product;
+  type?: string;
   color?: string;
   size?: string;
   quantity?: number;
@@ -52,20 +59,10 @@ type StoreContextValue = {
   clearCart: () => void;
 };
 
-const cartStorageKey = "storefront-cart-v1";
+const cartStorageKey = "storefront-cart-v2";
 const wishlistStorageKey = "storefront-wishlist-v1";
 
 const StoreContext = createContext<StoreContextValue | undefined>(undefined);
-
-function parseStoredValue<T>(value: string | null, fallback: T): T {
-  if (!value) return fallback;
-
-  try {
-    return JSON.parse(value) as T;
-  } catch {
-    return fallback;
-  }
-}
 
 let cartMemory: CartItem[] = [];
 let wishlistMemory: string[] = [];
@@ -80,21 +77,18 @@ function notifyStoreChange() {
 function initMemoryStore() {
   if (initialized || typeof window === "undefined") return;
 
-  try {
-    const savedCart = parseStoredValue<CartItem[]>(
-      localStorage.getItem(cartStorageKey),
-      []
-    );
-    const savedWishlist = parseStoredValue<string[]>(
-      localStorage.getItem(wishlistStorageKey),
-      []
-    );
+  const savedCart = readJSON<CartItem[]>(cartStorageKey, []);
+  const savedWishlist = readJSON<string[]>(wishlistStorageKey, []);
 
-    if (Array.isArray(savedCart)) cartMemory = savedCart;
-    if (Array.isArray(savedWishlist)) wishlistMemory = savedWishlist;
-  } catch {
-    // Continue with in-memory data if storage is unavailable.
+  if (Array.isArray(savedCart)) {
+    cartMemory = savedCart.map((item) => ({
+      ...item,
+      type: item.type ?? "",
+      sellerId: item.sellerId ?? PLATFORM_SELLER_ID,
+      sellerName: item.sellerName ?? "",
+    }));
   }
+  if (Array.isArray(savedWishlist)) wishlistMemory = savedWishlist;
 
   initialized = true;
 }
@@ -132,13 +126,7 @@ function mutateCart(updater: (previous: CartItem[]) => CartItem[]) {
   initMemoryStore();
   cartMemory = updater(cartMemory);
 
-  if (typeof window !== "undefined") {
-    try {
-      localStorage.setItem(cartStorageKey, JSON.stringify(cartMemory));
-    } catch {
-      // Cart remains available in memory if storage is unavailable.
-    }
-  }
+  writeJSON(cartStorageKey, cartMemory);
 
   notifyStoreChange();
 }
@@ -147,16 +135,7 @@ function mutateWishlist(updater: (previous: string[]) => string[]) {
   initMemoryStore();
   wishlistMemory = updater(wishlistMemory);
 
-  if (typeof window !== "undefined") {
-    try {
-      localStorage.setItem(
-        wishlistStorageKey,
-        JSON.stringify(wishlistMemory)
-      );
-    } catch {
-      // Wishlist remains available in memory if storage is unavailable.
-    }
-  }
+  writeJSON(wishlistStorageKey, wishlistMemory);
 
   notifyStoreChange();
 }
@@ -208,7 +187,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const addToCart = useCallback(
     (
-      { product, color, size, quantity = 1 }: AddToCartInput,
+      { product, type, color, size, quantity = 1 }: AddToCartInput,
       openDrawer = true
     ) => {
       const safeQuantity = Number.isFinite(quantity)
@@ -216,15 +195,20 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         : 1;
 
       const selectedColor =
-        product.colors.length > 0 ? (color ?? product.colors[0]) : "";
+        product.colors.length > 0 ? (color ?? product.colors[0].name) : "";
+      const colorVariant = product.colors.find((variant) => variant.name === selectedColor);
 
       const selectedSize =
         product.sizes.length > 0 ? (size ?? product.sizes[0]) : "";
+
+      const typeValues = product.typeOption?.values ?? [];
+      const selectedType = typeValues.length > 0 ? (type ?? typeValues[0]) : "";
 
       mutateCart((previous) => {
         const existingItem = previous.find(
           (item) =>
             item.productId === product.id &&
+            (item.type ?? "") === selectedType &&
             item.color === selectedColor &&
             item.size === selectedSize
         );
@@ -241,15 +225,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         }
 
         const newItem: CartItem = {
-          id: `${product.id}-${selectedColor}-${selectedSize}`,
+          id: [product.id, selectedType, selectedColor, selectedSize].filter(Boolean).join("|"),
           productId: product.id,
           slug: product.slug,
           name: product.name,
-          image: product.images[0],
+          image: colorVariant?.image ?? product.images[0],
           price: product.price,
+          type: selectedType,
           color: selectedColor,
           size: selectedSize,
           quantity: safeQuantity,
+          sellerId: product.sellerId,
+          sellerName: product.sellerName,
         };
 
         return [...previous, newItem];

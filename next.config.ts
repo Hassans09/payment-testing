@@ -5,6 +5,7 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       {
+        // Homepage hero photo (restored from the original Rebel Fashion homepage).
         protocol: "https",
         hostname: "images.unsplash.com",
         pathname: "/**",

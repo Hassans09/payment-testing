@@ -3,10 +3,15 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useSyncExternalStore } from "react";
-import { Clock, MapPin, ShieldCheck } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState, useSyncExternalStore } from "react";
+import { CheckCircle2, Clock, LoaderCircle, MapPin, ShieldCheck, XCircle } from "lucide-react";
 
-import { formatPrice } from "@/lib/store-data";
+import { useStore } from "@/components/store-provider";
+import { confirmPayment } from "@/lib/api";
+import { readJSON } from "@/lib/client-storage";
+import { formatLineOptions, formatPrice } from "@/lib/format";
+import type { PaymentConfirmation } from "@/lib/types";
 
 type SavedOrder = {
   orderId: string;
@@ -25,6 +30,7 @@ type SavedOrder = {
     price: number;
     quantity: number;
     image: string;
+    type?: string;
     color: string;
     size: string;
   }>;
@@ -38,14 +44,7 @@ function getSessionOrder(): SavedOrder | null {
   if (typeof window === "undefined") return null;
 
   if (!orderInitialized) {
-    try {
-      const raw = sessionStorage.getItem("last_store_order");
-      if (raw) {
-        cachedOrder = JSON.parse(raw) as SavedOrder;
-      }
-    } catch {
-      cachedOrder = null;
-    }
+    cachedOrder = readJSON<SavedOrder | null>("last_store_order", null, "session");
 
     orderInitialized = true;
   }
@@ -62,57 +61,176 @@ function getServerOrder() {
 }
 
 export default function CheckoutSuccessPage() {
-  const order = useSyncExternalStore(
-    subscribeOrder,
-    getSessionOrder,
-    getServerOrder
+  return (
+    <Suspense fallback={<ConfirmingState />}>
+      <CheckoutSuccessContent />
+    </Suspense>
   );
+}
 
-  const orderId = order?.orderId ?? null;
-  const customerName = order?.customerName ?? null;
-  const address = order?.address ?? null;
-  const total = order?.total ?? null;
+function ConfirmingState() {
+  return (
+    <div className="flex min-h-[50vh] items-center justify-center gap-2 px-4 text-sm text-[color:var(--brand-charcoal)]/70">
+      <LoaderCircle className="h-5 w-5 animate-spin text-[color:var(--brand-primary)]" /> Confirming your payment…
+    </div>
+  );
+}
+
+type Verification =
+  | { state: "checking" }
+  | { state: "done"; result: PaymentConfirmation }
+  | { state: "error"; message: string };
+
+function CheckoutSuccessContent() {
+  const params = useSearchParams();
+  // "order" is the current param; "ref" is kept for links created by older versions.
+  const ref = params.get("order") ?? params.get("ref") ?? "";
+  const transactionRef = params.get("tx") ?? params.get("transactionRef") ?? undefined;
+
+  const sessionOrder = useSyncExternalStore(subscribeOrder, getSessionOrder, getServerOrder);
+  const order = sessionOrder && (!ref || sessionOrder.orderId === ref) ? sessionOrder : null;
+
+  const { clearCart } = useStore();
+  const [verification, setVerification] = useState<Verification>({ state: "checking" });
+  const [attempt, setAttempt] = useState(0);
+
+  useEffect(() => {
+    if (!ref) return;
+    let cancelled = false;
+    confirmPayment(ref, transactionRef)
+      .then((result) => {
+        if (cancelled) return;
+        setVerification({ state: "done", result });
+        // The bag is emptied only now: kept when the payment failed so the shopper can retry.
+        if (result.status !== "failed") clearCart();
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          setVerification({
+            state: "error",
+            message: error instanceof Error ? error.message : "We couldn't check your payment right now.",
+          });
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [ref, transactionRef, attempt, clearCart]);
+
+  const status: "checking" | "paid" | "pending" | "failed" | "missing" = !ref
+    ? "missing"
+    : verification.state === "checking"
+      ? "checking"
+      : verification.state === "error"
+        ? "pending"
+        : verification.result.status;
+
+  const serverOrder = verification.state === "done" ? verification.result.order : null;
+  const orderId = ref || order?.orderId || null;
+  const customerName = order?.customerName ?? serverOrder?.customer.fullName ?? null;
+  const address =
+    order?.address ??
+    (serverOrder ? [serverOrder.customer.address, serverOrder.customer.city, serverOrder.customer.state].filter(Boolean).join(", ") : null);
+  const total = serverOrder?.total ?? order?.total ?? null;
+  const phone = order?.phone ?? serverOrder?.customer.phone ?? null;
+  const paymentMethod = order?.paymentMethod ?? serverOrder?.paymentMethod;
+  const items =
+    order?.items ??
+    serverOrder?.items.map((item) => ({
+      id: item.productId,
+      name: item.name,
+      price: item.unitPrice,
+      quantity: item.quantity,
+      image: item.image,
+      type: item.type,
+      color: item.color,
+      size: item.size,
+    })) ??
+    [];
 
   const paymentMethodLabel =
-    order?.paymentMethod === "transfer"
-      ? "Bank Transfer"
-      : order?.paymentMethod === "pod"
-        ? "Pay on Delivery"
-        : order?.paymentMethod === "card"
-          ? "Card Payment"
-          : order?.paymentMethod === "fairsurepay"
-            ? "FairSurePay"
-            : "Payment Method Pending";
+    paymentMethod === "transfer" ? "Bank transfer (Fairsure)" : paymentMethod === "card" ? "Card (Fairsure)" : "Fairsure";
+
+  const copy = {
+    checking: {
+      Icon: LoaderCircle,
+      badge: "Checking payment",
+      title: customerName ? `Thanks, ${customerName.split(" ")[0]}!` : "Thanks for your order!",
+      body: "We're confirming your payment with our payment provider. This only takes a moment.",
+      statusLine: "Checking payment…",
+    },
+    paid: {
+      Icon: CheckCircle2,
+      badge: "Payment confirmed",
+      title: customerName ? `Thank you, ${customerName.split(" ")[0]}!` : "Payment confirmed",
+      body: "Your payment is confirmed and your order is being prepared. We'll keep you posted by email and phone.",
+      statusLine: "Paid",
+    },
+    pending: {
+      Icon: Clock,
+      badge: "Awaiting confirmation",
+      title: customerName ? `Thanks, ${customerName.split(" ")[0]}!` : "Order received",
+      body:
+        verification.state === "error"
+          ? `${verification.message} Your order is saved. If you were charged, it will be confirmed automatically.`
+          : "We haven't received confirmation of your payment yet. If you completed it, it will be confirmed automatically within a few minutes.",
+      statusLine: "Awaiting confirmation",
+    },
+    failed: {
+      Icon: XCircle,
+      badge: "Payment not completed",
+      title: "Your payment didn't go through",
+      body: "No order has been confirmed. You can go back to your bag and try again.",
+      statusLine: "Not paid",
+    },
+    missing: {
+      Icon: Clock,
+      badge: "Checkout status",
+      title: "No order to show",
+      body: "This page needs an order reference. Return to the shop, or contact support if you need help with an order.",
+      statusLine: "Unknown",
+    },
+  }[status];
+
+  const message = verification.state === "done" ? verification.result.message : undefined;
+  const StatusIcon = copy.Icon;
 
   return (
-    <main className="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8">
+    <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-12 lg:px-8">
       <div className="space-y-8 rounded-[36px] border border-[color:var(--brand-border)] bg-[color:var(--brand-white)] p-6 shadow-[0_20px_55px_rgba(91,64,50,0.06)] sm:p-10">
-        {/* Pending Status Header */}
+        {/* Status header */}
         <header className="space-y-3 text-center">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-[color:var(--brand-border)] bg-[color:var(--brand-cream)] text-[color:var(--brand-deep)]">
-            <Clock className="h-8 w-8" />
+            <StatusIcon className={`h-8 w-8 ${status === "checking" ? "animate-spin" : ""} ${status === "paid" ? "text-emerald-700" : ""} ${status === "failed" ? "text-red-600" : ""}`} />
           </div>
 
-          <span className="inline-flex rounded-full bg-[color:var(--brand-primary)]/20 px-3.5 py-1 text-xs font-bold uppercase tracking-wider text-[color:var(--brand-deep)]">
-            {orderId ? `Order Reference • ${orderId}` : "Checkout Status"}
+          <span className="inline-flex max-w-full rounded-full bg-[color:var(--brand-primary)]/20 px-3.5 py-1 text-xs font-bold uppercase tracking-wider text-[color:var(--brand-deep)]">
+            {orderId ? `${copy.badge} • ${orderId}` : copy.badge}
           </span>
 
           <h1 className="text-3xl font-extrabold tracking-tight text-[color:var(--brand-deep)] sm:text-4xl">
-            {customerName
-              ? `Thank you, ${customerName}!`
-              : "Checkout received"}
+            {copy.title}
           </h1>
 
-          <p className="mx-auto max-w-lg text-sm leading-relaxed text-[color:var(--brand-charcoal)]/75">
-            {order
-              ? "Your checkout details are available in this session. Your order and payment have not been verified by the server yet. Please wait for official confirmation."
-              : "No order details were found in this browser session. This page does not confirm that an order was submitted. Return to checkout or contact support if you need assistance."}
+          <p className="mx-auto max-w-lg text-sm leading-relaxed text-[color:var(--brand-charcoal)]/75" aria-live="polite">
+            {copy.body}
           </p>
 
-          {order && (
-            <p className="text-sm font-bold text-[color:var(--brand-deep)]">
-              Status: Awaiting confirmation
-            </p>
+          {message && (
+            <p className="mx-auto max-w-lg text-xs text-[color:var(--brand-charcoal)]/55">{message}</p>
+          )}
+
+          {status === "pending" && (
+            <button
+              type="button"
+              onClick={() => {
+                setVerification({ state: "checking" });
+                setAttempt((value) => value + 1);
+              }}
+              className="inline-flex min-h-11 items-center justify-center rounded-full border border-[color:var(--brand-border)] bg-white px-6 text-xs font-bold uppercase tracking-wider text-[color:var(--brand-deep)] transition hover:bg-[color:var(--brand-soft)]/50"
+            >
+              Check again
+            </button>
           )}
         </header>
 
@@ -122,13 +240,13 @@ export default function CheckoutSuccessPage() {
             <span>Order Progress</span>
             <span className="flex items-center gap-1 text-[color:var(--brand-charcoal)]/70">
               <Clock className="h-3.5 w-3.5" />
-              Awaiting confirmation
+              {copy.statusLine}
             </span>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 pt-2 sm:grid-cols-4">
+          <div className="grid grid-cols-[repeat(2,minmax(0,1fr))] gap-4 pt-2 sm:grid-cols-[repeat(4,minmax(0,1fr))]">
             {[
-              ["1", "Order Received", "Pending confirmation"],
+              ["1", "Order Received", status === "paid" ? "Paid" : "Pending confirmation"],
               ["2", "Packaging", "Not started"],
               ["3", "In Transit", "Not started"],
               ["4", "Delivered", "Not started"],
@@ -166,9 +284,7 @@ export default function CheckoutSuccessPage() {
             </p>
 
             <p className="text-[color:var(--brand-charcoal)]/65">
-              {order?.phone
-                ? `Contact phone: ${order.phone}`
-                : "Contact phone unavailable"}
+              {phone ? `Contact phone: ${phone}` : "Contact phone unavailable"}
             </p>
           </div>
 
@@ -183,7 +299,7 @@ export default function CheckoutSuccessPage() {
             </p>
 
             <p className="text-[color:var(--brand-charcoal)]/65">
-              Payment status: Not yet verified
+              Payment status: {copy.statusLine}
             </p>
 
             <p className="text-[color:var(--brand-charcoal)]/65">
@@ -196,14 +312,14 @@ export default function CheckoutSuccessPage() {
         </section>
 
         {/* Purchased Items */}
-        {order?.items && order.items.length > 0 && (
+        {items.length > 0 && (
           <section className="space-y-3">
             <h2 className="text-sm font-bold uppercase tracking-wider text-[color:var(--brand-deep)]">
-              Checkout Items ({order.items.length})
+              Items ({items.length})
             </h2>
 
             <div className="divide-y divide-[color:var(--brand-border)]/60 border-y border-[color:var(--brand-border)]/60">
-              {order.items.map((item, index) => (
+              {items.map((item, index) => (
                 <div
                   key={`${item.id}-${index}`}
                   className="flex items-center justify-between gap-3 py-3"
@@ -224,7 +340,7 @@ export default function CheckoutSuccessPage() {
                         {item.name}
                       </p>
                       <p className="text-[11px] text-[color:var(--brand-charcoal)]/65">
-                        {item.color} • {item.size} • Qty {item.quantity}
+                        {formatLineOptions(item)} • Qty {item.quantity}
                       </p>
                     </div>
                   </div>
@@ -240,6 +356,14 @@ export default function CheckoutSuccessPage() {
 
         {/* Navigation */}
         <nav className="flex flex-col justify-center gap-3 pt-4 sm:flex-row">
+          {status === "failed" && (
+            <Link
+              href="/cart"
+              className="inline-flex min-h-11 items-center justify-center rounded-full bg-[color:var(--brand-deep)] px-8 py-3.5 text-xs font-bold uppercase tracking-wider text-white transition hover:bg-[color:var(--brand-chocolate)]"
+            >
+              Try payment again
+            </Link>
+          )}
           <Link
             href="/shop"
             className="inline-flex items-center justify-center rounded-full bg-[color:var(--brand-primary)] px-8 py-3.5 text-xs font-bold uppercase tracking-wider text-[color:var(--brand-deep)] shadow-sm transition hover:bg-[color:var(--brand-secondary)]"
@@ -255,6 +379,6 @@ export default function CheckoutSuccessPage() {
           </Link>
         </nav>
       </div>
-    </main>
+    </div>
   );
 }

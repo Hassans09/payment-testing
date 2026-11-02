@@ -6,7 +6,7 @@ import { useEffect } from "react";
 import { ArrowRight, Minus, Plus, ShoppingBag, Trash2, X } from "lucide-react";
 
 import { useStore } from "@/components/store-provider";
-import { formatPrice } from "@/lib/store-data";
+import { formatLineOptions, formatPrice } from "@/lib/format";
 
 export function CartDrawer() {
   const { isCartOpen, closeCart, cart, subtotal, updateCartQuantity, removeFromCart } = useStore();
@@ -119,7 +119,7 @@ export function CartDrawer() {
                         </div>
 
                         <p className="mt-1 text-xs text-[color:var(--brand-charcoal)]/65">
-                          {item.color} • {item.size}
+                          {formatLineOptions(item)}
                         </p>
                       </div>
 

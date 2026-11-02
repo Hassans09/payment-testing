@@ -2,6 +2,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import {
   ArrowLeft,
@@ -19,7 +20,12 @@ import {
 } from "lucide-react";
 
 import { useStore } from "@/components/store-provider";
-import { formatPrice } from "@/lib/store-data";
+import { initCheckout } from "@/lib/api";
+import { writeJSON } from "@/lib/client-storage";
+import { DELIVERY_ESTIMATES, SHIPPING_RATES, SITE_NAME, USE_MOCK_API } from "@/lib/config";
+import { rememberOrder } from "@/lib/my-orders";
+import { FAIRSURE_METHOD_FOR, openFairsureCheckout, resolvePublicKey, splitName, toE164Nigeria } from "@/lib/payments/fairsure";
+import { formatLineOptions, formatPrice } from "@/lib/format";
 
 const NIGERIAN_STATES = [
   "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa",
@@ -55,7 +61,8 @@ function matchNigerianState(value?: string): string {
 }
 
 export default function CheckoutPage() {
-  const { cart, subtotal, clearCart } = useStore();
+  const { cart, subtotal } = useStore();
+  const router = useRouter();
 
   const [form, setForm] = useState({
     fullName: "",
@@ -71,6 +78,9 @@ export default function CheckoutPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const [paymentNotice, setPaymentNotice] = useState("");
+  // True while we navigate to the success page, so the emptied bag doesn't flash the empty state.
+  const [redirecting, setRedirecting] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
   const [locationMessage, setLocationMessage] = useState("");
   const [locationMessageType, setLocationMessageType] =
@@ -78,7 +88,7 @@ export default function CheckoutPage() {
   const [coordinates, setCoordinates] = useState<Coordinates | null>(null);
 
   const shippingCost =
-    subtotal === 0 ? 0 : form.shippingMethod === "priority" ? 6500 : 3500;
+    subtotal === 0 ? 0 : SHIPPING_RATES[form.shippingMethod];
 
   const finalTotal = Math.max(0, subtotal + shippingCost);
 
@@ -314,110 +324,140 @@ export default function CheckoutPage() {
     }
 
     setIsSubmitting(true);
+    setPaymentNotice("");
 
     try {
-      const response = await fetch("/api/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          customer: {
-            fullName: form.fullName.trim(),
-            email: form.email.trim(),
-            phone: form.phone.trim(),
-            address: form.address.trim(),
-            city: form.city.trim(),
-            state: form.state,
-          },
-          deliveryLocation: coordinates,
-          items: cart,
-          shippingMethod: form.shippingMethod,
-          paymentMethod: form.paymentMethod,
-          displayedSubtotal: subtotal,
-          displayedShipping: shippingCost,
-          displayedTotal: finalTotal,
-        }),
-      });
-
-      const data: {
-        error?: string;
-        checkoutUrl?: string;
-      } = await response.json().catch(() => ({}));
-
-      if (!response.ok) {
-        throw new Error(
-          data.error ||
-            "We couldn't process your request. Please try again."
-        );
-      }
-
-      let isValidUrl = false;
-      if (data.checkoutUrl) {
-        if (/^https:\/\//i.test(data.checkoutUrl)) {
-          isValidUrl = true;
-        } else {
-          try {
-            const url = new URL(data.checkoutUrl, window.location.origin);
-            if (url.origin === window.location.origin) {
-              isValidUrl = true;
-            }
-          } catch {
-            isValidUrl = false;
-          }
-        }
-      }
-
-      if (!isValidUrl || !data.checkoutUrl) {
-        throw new Error(
-          "The payment service has not returned a valid checkout link. No payment has been confirmed."
-        );
-      }
-
-      const targetUrl = new URL(data.checkoutUrl, window.location.origin);
-      const orderId = targetUrl.searchParams.get("ref") || "";
-
-      const savedOrder = {
-        orderId,
-        customerName: form.fullName.trim(),
-        email: form.email.trim(),
-        phone: form.phone.trim(),
-        address: [form.address.trim(), form.city.trim(), form.state]
-          .filter(Boolean)
-          .join(", "),
-        paymentMethod: form.paymentMethod,
-        total: finalTotal,
-        subtotal: subtotal,
-        shippingCost: shippingCost,
-        discountAmount: 0,
+      // 1. The server creates the order from its own prices and returns the Fairsure init
+      //    values { orderId, ref, amount, publicKey }. Mock mode: /api/checkout. Real backend: POST /orders.
+      const init = await initCheckout({
+        customer: {
+          fullName: form.fullName.trim(),
+          email: form.email.trim(),
+          phone: form.phone.trim(),
+          address: form.address.trim(),
+          city: form.city.trim(),
+          state: form.state,
+        },
+        deliveryLocation: coordinates,
         items: cart.map((item) => ({
-          id: item.id,
+          productId: item.productId,
+          slug: item.slug,
           name: item.name,
-          price: item.price,
-          quantity: item.quantity,
           image: item.image,
+          type: item.type,
           color: item.color,
           size: item.size,
+          quantity: item.quantity,
+          unitPrice: item.price,
+          sellerId: item.sellerId,
+          sellerName: item.sellerName,
         })),
-        date: new Date().toISOString(),
-      };
+        shippingMethod: form.shippingMethod,
+        paymentMethod: form.paymentMethod,
+        displayedSubtotal: subtotal,
+        displayedShipping: shippingCost,
+        displayedTotal: finalTotal,
+      });
 
-      try {
-        sessionStorage.setItem("last_store_order", JSON.stringify(savedOrder));
-      } catch {
-        // Continue if sessionStorage is restricted
+      if (!init.ref || !Number.isFinite(init.amount) || init.amount <= 0) {
+        throw new Error("The payment could not be started. No money has been taken. Please try again.");
       }
 
-      clearCart();
-      window.location.assign(data.checkoutUrl);
+      // Listed on /account ("Your orders") and pre-filled on /track-order.
+      rememberOrder(init.ref, form.email.trim());
+
+      // Kept in this tab only, so the success page can show the items while the server confirms.
+      writeJSON(
+        "last_store_order",
+        {
+          orderId: init.ref,
+          customerName: form.fullName.trim(),
+          email: form.email.trim(),
+          phone: form.phone.trim(),
+          address: [form.address.trim(), form.city.trim(), form.state].filter(Boolean).join(", "),
+          paymentMethod: form.paymentMethod,
+          total: init.amount,
+          subtotal,
+          shippingCost,
+          discountAmount: 0,
+          items: cart.map((item) => ({
+            id: item.id,
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity,
+            image: item.image,
+            type: item.type,
+            color: item.color,
+            size: item.size,
+          })),
+          date: new Date().toISOString(),
+        },
+        "session"
+      );
+
+      const successUrl = (transactionRef?: string) => {
+        const params = new URLSearchParams({ order: init.ref });
+        if (transactionRef) params.set("tx", transactionRef);
+        return `/checkout/success?${params.toString()}`;
+      };
+
+      const publicKey = resolvePublicKey(init.publicKey);
+
+      // 2a. No public key configured: demo store only -> instant demo payment.
+      if (!publicKey) {
+        if (!USE_MOCK_API) {
+          throw new Error("Online payment isn't available right now. Your bag is saved, please try again shortly.");
+        }
+        setRedirecting(true);
+        router.push(successUrl());
+        return;
+      }
+
+      // 2b. Open the Fairsure inline checkout (sandbox for TEST_ keys, see NEXT_PUBLIC_FAIRSURE_ENV).
+      const { first, last } = splitName(form.fullName);
+      await openFairsureCheckout({
+        key: publicKey,
+        email: form.email.trim(),
+        amount: init.amount,
+        currency: "NGN",
+        first_name: first,
+        last_name: last,
+        phone_number: toE164Nigeria(form.phone),
+        customerId: form.email.trim(),
+        ref: init.ref,
+        narration: init.narration || `${SITE_NAME} order ${init.ref}`,
+        callback_url: `${window.location.origin}${successUrl()}`,
+        // Open the modal on the tab the buyer chose here (card -> bankCard, transfer -> bankTransfer).
+        paymentMethod: FAIRSURE_METHOD_FOR[form.paymentMethod],
+        onSuccess: (response) => {
+          // UX hint only: the success page asks the server to verify the payment
+          // and empties the bag once the payment is not "failed".
+          setRedirecting(true);
+          router.push(successUrl(response?.transactionRef));
+        },
+        onError: (response) => {
+          setIsSubmitting(false);
+          setSubmitError(
+            `${response?.message ? `${response.message}. ` : ""}Your payment didn't go through and no order was confirmed. Your bag is still saved, so you can try again.`
+          );
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        },
+        onClose: () => {
+          setIsSubmitting(false);
+          setPaymentNotice("Payment window closed. No money was taken and your bag is still here whenever you're ready.");
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        },
+      });
+      // Keep the button disabled while the modal is open; the callbacks above reset it.
     } catch (error) {
+      setIsSubmitting(false);
       setSubmitError(
         error instanceof Error
           ? error.message
-          : "Something went wrong. Please try again."
+          : "Something went wrong. Your bag is saved, please try again."
       );
 
       window.scrollTo({ top: 0, behavior: "smooth" });
-    } finally {
-      setIsSubmitting(false);
     }
   }
 
@@ -442,9 +482,17 @@ export default function CheckoutPage() {
     );
   }
 
+  if (redirecting) {
+    return (
+      <div className="flex min-h-[50vh] items-center justify-center gap-2 text-sm text-[color:var(--brand-charcoal)]/70">
+        <LoaderCircle className="h-5 w-5 animate-spin text-[color:var(--brand-primary)]" /> Confirming your payment…
+      </div>
+    );
+  }
+
   if (cart.length === 0) {
     return (
-      <main className="mx-auto max-w-3xl px-4 py-20 sm:px-6">
+      <div className="mx-auto max-w-3xl px-4 py-20 sm:px-6">
         <div className="rounded-3xl border border-[color:var(--brand-border)] bg-[color:var(--brand-white)] p-10 text-center">
           <PackageCheck className="mx-auto h-10 w-10 text-[color:var(--brand-primary)]" />
           <h1 className="mt-4 text-3xl font-bold text-[color:var(--brand-deep)]">
@@ -460,12 +508,12 @@ export default function CheckoutPage() {
             Browse collection
           </Link>
         </div>
-      </main>
+      </div>
     );
   }
 
   return (
-    <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-8 flex items-center justify-between gap-4 border-b border-[color:var(--brand-border)] pb-6">
         <div>
           <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-[color:var(--brand-primary)]">
@@ -488,6 +536,16 @@ export default function CheckoutPage() {
           Shopping bag
         </Link>
       </div>
+
+      {paymentNotice && !submitError && (
+        <div
+          role="status"
+          className="mb-6 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"
+        >
+          <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+          <p>{paymentNotice}</p>
+        </div>
+      )}
 
       {submitError && (
         <div
@@ -638,7 +696,7 @@ export default function CheckoutPage() {
                         : "border-[color:var(--brand-border)]"
                     }`}
                   >
-                    <span className="border-r border-[color:var(--brand-border)] px-3 py-3 text-sm font-semibold text-[color:var(--brand-deep)]">
+                    <span className="flex shrink-0 items-center whitespace-nowrap border-r border-[color:var(--brand-border)] px-3 py-3 text-sm font-semibold text-[color:var(--brand-deep)]">
                       +234
                     </span>
                     <input
@@ -736,14 +794,14 @@ export default function CheckoutPage() {
                   {
                     id: "standard" as const,
                     title: "Standard dispatch",
-                    description: "2–4 business days",
-                    price: 3500,
+                    description: DELIVERY_ESTIMATES.standard,
+                    price: SHIPPING_RATES.standard,
                   },
                   {
                     id: "priority" as const,
                     title: "Priority dispatch",
-                    description: "Faster processing",
-                    price: 6500,
+                    description: DELIVERY_ESTIMATES.priority,
+                    price: SHIPPING_RATES.priority,
                   },
                 ]).map((option) => (
                   <button
@@ -798,14 +856,14 @@ export default function CheckoutPage() {
                     id: "card" as const,
                     title: "Pay with Card",
                     description:
-                      "Continue to the secure payment provider to pay by card.",
+                      "The secure Fairsure window opens straight on card payment.",
                     Icon: CreditCard,
                   },
                   {
                     id: "transfer" as const,
                     title: "Bank Transfer",
                     description:
-                      "Continue to the payment provider for supported transfer instructions.",
+                      "The secure Fairsure window opens with an account number to transfer to.",
                     Icon: Landmark,
                   },
                 ]).map(({ id, title, description, Icon }) => (
@@ -855,7 +913,7 @@ export default function CheckoutPage() {
                         {item.name}
                       </p>
                       <p className="mt-1 text-xs text-[color:var(--brand-charcoal)]/65">
-                        {item.color} / {item.size} · Qty {item.quantity}
+                        {formatLineOptions(item)} · Qty {item.quantity}
                       </p>
                     </div>
                     <p className="shrink-0 text-sm font-semibold text-[color:var(--brand-deep)]">
@@ -905,18 +963,21 @@ export default function CheckoutPage() {
                 className="mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-[color:var(--brand-deep)] px-6 py-4 text-sm font-bold text-white transition hover:bg-[color:var(--brand-primary)] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isSubmitting ? (
-                  "Processing..."
+                  <>
+                    <LoaderCircle className="h-4 w-4 animate-spin" />
+                    Opening secure payment…
+                  </>
                 ) : (
                   <>
                     <LockKeyhole className="h-4 w-4" />
-                    Continue to Payment · {formatPrice(finalTotal)}
+                    Pay {formatPrice(finalTotal)}
                   </>
                 )}
               </button>
 
               <p className="mt-4 flex items-start justify-center gap-2 text-center text-xs leading-5 text-[color:var(--brand-charcoal)]/65">
                 <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
-                Your order and payment will only be confirmed by the server.
+                Payments are processed securely by Fairsure. Your order is confirmed once our server verifies the payment.
               </p>
 
               <Link
@@ -930,6 +991,6 @@ export default function CheckoutPage() {
           </aside>
         </div>
       </form>
-    </main>
+    </div>
   );
 }

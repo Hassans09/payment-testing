@@ -1,114 +1,91 @@
 import Link from "next/link";
-import { Lock, ShieldCheck } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import AnimatedLogo from "@/components/animated-logo";
+import { SITE_NAME } from "@/lib/config";
 
 const footerShopLinks = [
-  { href: "/shop?category=graphic-tees", label: "Oversized Graphic Tees" },
-  { href: "/shop?category=plain-tees", label: "Premium Plain T-Shirts" },
-  { href: "/shop?category=hoodies", label: "Streetwear Hoodies" },
-  { href: "/shop?category=cargos", label: "Cargo Trousers" },
-  { href: "/shop?category=jeans", label: "Relaxed-Fit Jeans" },
-  { href: "/shop?category=co-ords", label: "Matching Co-Ord Sets" },
-  { href: "/shop?category=blazers", label: "Lightweight Blazers" },
-  { href: "/shop?category=accessories", label: "Sneakers & Accessories" },
+  { href: "/shop", label: "All products" },
+  { href: "/shop?gender=men", label: "Men" },
+  { href: "/shop?gender=women", label: "Women" },
+  { href: "/shop?gender=kids", label: "Kids" },
+  { href: "/shop?sold=marketplace", label: "From our sellers" },
+  { href: "/category/kaftans", label: `${SITE_NAME} kaftans` },
 ];
+
+const footerHelpLinks = [
+  { href: "/track-order", label: "Track your order" },
+  { href: "/help", label: "Help & FAQ" },
+  { href: "/delivery-returns", label: "Delivery & returns" },
+  { href: "/account", label: "Your orders" },
+  { href: "/wishlist", label: "Wishlist" },
+];
+
+const footerSellLinks = [
+  { href: "/sell", label: `Sell on ${SITE_NAME}` },
+  { href: "/seller/login", label: "Seller login" },
+];
+
+const footerLegalLinks = [
+  { href: "/terms", label: "Terms" },
+  { href: "/privacy", label: "Privacy" },
+  { href: "/delivery-returns", label: "Returns" },
+  { href: "/help", label: "Contact" },
+  { href: "/admin/login", label: "Admin" },
+];
+
+const linkClass = "inline-flex min-h-8 items-center transition hover:text-[color:var(--brand-primary)]";
+const headingClass = "text-[11px] font-bold uppercase tracking-[0.2em] text-[color:var(--brand-deep)]";
+
+function LinkColumn({ title, links }: { title: string; links: { href: string; label: string }[] }) {
+  return (
+    <div>
+      <h3 className={headingClass}>{title}</h3>
+      <ul className="mt-3 space-y-1 text-[13px] text-[color:var(--brand-charcoal)]/70">
+        {links.map((item) => (
+          <li key={item.label}>
+            <Link href={item.href} className={linkClass}>
+              {item.label}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
 
 export function Footer() {
   return (
-    <footer className="mt-24 border-t border-[color:var(--brand-border)] bg-[color:var(--brand-white)]">
-      <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
-        <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-[1.5fr_1.1fr_1fr_1fr]">
-          {/* Brand Intro & Locations */}
-          <div className="space-y-4">
-            <Link href="/" className="inline-block" aria-label="Store home">
+    <footer className="mt-12 border-t border-[color:var(--brand-border)] bg-[color:var(--brand-white)] sm:mt-16">
+      {/* Extra bottom padding on phones keeps the last line clear of the floating WhatsApp button. */}
+      <div className="mx-auto max-w-7xl px-4 pb-24 pt-12 sm:px-6 sm:pb-10 sm:pt-14 lg:px-8">
+        <div className="grid grid-cols-2 gap-x-6 gap-y-10 lg:grid-cols-[1.6fr_1fr_1fr_1fr]">
+          <div className="col-span-2 lg:col-span-1">
+            <Link href="/" className="inline-flex min-h-11 items-center" aria-label="Store home">
               <AnimatedLogo className="min-w-[150px]" />
             </Link>
-
-            <p className="max-w-sm text-xs leading-relaxed text-[color:var(--brand-charcoal)]/75">
-              A clean, modern storefront built for curated fashion and gifting selections. Product, category, and account flows are ready to connect to backend APIs.
+            <p className="mt-3 max-w-xs text-[13px] leading-relaxed text-[color:var(--brand-charcoal)]/70">
+              Clothing, shoes, bags and accessories from our own collection and approved sellers across Nigeria.
             </p>
-
-            <p className="text-xs text-[color:var(--brand-charcoal)]/70">Need assistance? Contact support through your connected backend channels.</p>
           </div>
 
-          {/* Curated Categories */}
-          <div className="space-y-4">
-            <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-[color:var(--brand-deep)]">
-              Curated Collections
-            </h3>
-            <ul className="grid grid-cols-1 gap-2.5 text-xs text-[color:var(--brand-charcoal)]/75">
-              {footerShopLinks.map((item) => (
-                <li key={item.label}>
-                  <Link href={item.href} className="hover:text-[color:var(--brand-primary)] transition">
-                    {item.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Client Concierge */}
-
-          {/* Client Concierge */}
-          <div className="space-y-4">
-            <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-[color:var(--brand-deep)]">
-              Client Concierge
-            </h3>
-            <ul className="space-y-2.5 text-xs text-[color:var(--brand-charcoal)]/75">
-              <li>
-                <Link href="/account" className="hover:text-[color:var(--brand-primary)] transition">
-                  Order Tracking Coming Soon
-                </Link>
-              </li>
-              <li>
-                <Link href="/wishlist" className="hover:text-[color:var(--brand-primary)] transition">
-                  My Wishlist Shortlist
-                </Link>
-              </li>
-              <li>
-                <Link href="/cart" className="hover:text-[color:var(--brand-primary)] transition">
-                  Shopping Bag
-                </Link>
-              </li>
-              <li>
-                <Link href="/checkout" className="hover:text-[color:var(--brand-primary)] transition">
-                  Express Checkout
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-
-          {/* Verified Guarantee & Payment methods */}
-          <div className="space-y-4">
-            <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-[color:var(--brand-deep)]">
-              Secure Checkout
-            </h3>
-            <div className="rounded-2xl border border-[color:var(--brand-border)] bg-[color:var(--brand-cream)] p-4 space-y-2 text-xs">
-              <div className="flex items-center gap-1.5 font-bold text-[color:var(--brand-deep)]">
-                <ShieldCheck className="h-4 w-4 text-[color:var(--brand-primary)]" />
-                <span>Secure Payment Gateway</span>
-              </div>
-              <p className="text-[11px] text-[color:var(--brand-charcoal)]/70 leading-relaxed">
-                256-bit SSL protection for card and transfer payments.
-              </p>
-              <div className="flex flex-wrap gap-1.5 pt-1 text-[10px] font-semibold text-[color:var(--brand-deep)]">
-                <span className="rounded bg-white px-2 py-0.5 border border-[color:var(--brand-border)]">Mastercard</span>
-                <span className="rounded bg-white px-2 py-0.5 border border-[color:var(--brand-border)]">Visa</span>
-                <span className="rounded bg-white px-2 py-0.5 border border-[color:var(--brand-border)]">Verve</span>
-                <span className="rounded bg-white px-2 py-0.5 border border-[color:var(--brand-border)]">USSD</span>
-              </div>
-            </div>
-          </div>
+          <LinkColumn title="Shop" links={footerShopLinks} />
+          <LinkColumn title="Help" links={footerHelpLinks} />
+          <LinkColumn title="Sell" links={footerSellLinks} />
         </div>
 
-        {/* Bottom Legal / Copyright */}
-        <div className="mt-14 flex flex-col gap-3 border-t border-[color:var(--brand-border)] pt-6 text-xs text-[color:var(--brand-charcoal)]/60 sm:flex-row sm:items-center sm:justify-between">
-          <p>© 2026 Storefront. All rights reserved.</p>
-          <p className="flex items-center gap-1">
-            <Lock className="h-3 w-3" />
-            <span>Encrypted ecommerce platform</span>
+        <div className="mt-12 flex flex-col gap-4 border-t border-[color:var(--brand-border)] pt-6 text-xs text-[color:var(--brand-charcoal)]/60 md:flex-row md:items-center md:justify-between">
+          <p className="flex items-center gap-1.5">
+            <ShieldCheck className="h-4 w-4 shrink-0 text-[color:var(--brand-primary)]" aria-hidden="true" />
+            <span>Secure payments by Fairsure: card, transfer and USSD.</span>
           </p>
+          <nav aria-label="Legal" className="flex flex-wrap gap-x-4">
+            {footerLegalLinks.map((item) => (
+              <Link key={item.label} href={item.href} className={linkClass}>
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+          <p>© 2026 {SITE_NAME}</p>
         </div>
       </div>
     </footer>

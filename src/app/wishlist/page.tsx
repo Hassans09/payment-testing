@@ -5,15 +5,17 @@ import { Heart, ShoppingBag } from "lucide-react";
 
 import { ProductCard } from "@/components/product-card";
 import { useStore } from "@/components/store-provider";
-import { products } from "@/lib/store-data";
+import { useAsync } from "@/hooks/use-async";
+import { getProducts } from "@/lib/api";
 
 export default function WishlistPage() {
   const { wishlist, toggleWishlist, addToCart } = useStore();
-  const savedProducts = products.filter((product) => wishlist.includes(product.id));
+  const { data: products } = useAsync(() => getProducts(), []);
+  const savedProducts = (products ?? []).filter((product) => wishlist.includes(product.id));
 
   const handleAddAllToCart = () => {
     savedProducts.forEach((p) => {
-      addToCart({ product: p, color: p.colors[0], size: p.sizes[0], quantity: 1 }, false);
+      addToCart({ product: p, color: p.colors[0]?.name, size: p.sizes[0], quantity: 1 }, false);
     });
   };
 
@@ -31,7 +33,7 @@ export default function WishlistPage() {
             Your wishlist is empty
           </h1>
           <p className="mt-2 max-w-md mx-auto text-sm text-[color:var(--brand-charcoal)]/70 leading-relaxed">
-            Shortlist your favourite streetwear hoodies, oversized graphic tees, and luxury tailoring to review and purchase later.
+            Tap the heart on any product to save it here for later.
           </p>
           <Link
             href="/shop"

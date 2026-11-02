@@ -1,46 +1,129 @@
 /**
- * Browser-only: turns a photo picked from a phone gallery or computer into a
- * compressed JPEG data URL (max 1200px on the longest edge, quality 0.8).
+ * Browser-only: turns a photo picked from a phone gallery or computer into a small
+ * compressed image (max 1200px on the longest edge): WebP where the browser can encode it
+ * (Chrome, Android, Edge, Firefox), JPEG otherwise (older Safari).
  *
- * Decoding is tried three ways, because phones differ:
- *   1. createImageBitmap (fast, respects EXIF rotation, works for HEIC on iOS Safari)
- *   2. <img> from an object URL
- *   3. <img> from a FileReader data URL (older Android WebViews)
- * Used by the mock API so listing photos fit in localStorage. A real backend
- * should receive the compressed blob instead (see BACKEND.md, uploadListingImage).
+ * Phone photos are big (12–108 MP). Decoding one at full size costs 4 bytes per pixel
+ * (a 50 MP photo is ~200 MB of memory), which on mid/low-end Android phones gets the tab
+ * killed: Chrome backgrounds the page while the photo picker is open, then reloads it
+ * when the picker closes, and the chosen photos (and the form) are gone. So we:
+ *   1. read the photo's size cheaply from an <img> (no pixel decode, EXIF orientation applied),
+ *   2. decode it straight to the target size with createImageBitmap(resizeWidth/resizeHeight),
+ *      which never holds the full-resolution bitmap,
+ * and only fall back to a full decode (createImageBitmap, <img> + object URL, <img> + FileReader)
+ * when that isn't supported. Every step has a timeout so a stuck decode can't hang the form.
+ *
+ * Used by the mock API so listing photos fit in localStorage, and by the http API so phones
+ * upload ~200 KB instead of 5–15 MB (see BACKEND.md, uploadListingImage).
  */
-import { fitWithin, isAcceptableImageFile, isHeicFile, JPEG_QUALITY, MAX_IMAGE_EDGE, MAX_SOURCE_BYTES } from "@/lib/image-utils";
+import {
+  fitWithin,
+  isAcceptableImageFile,
+  isHeicFile,
+  JPEG_QUALITY,
+  MAX_IMAGE_EDGE,
+  MAX_SOURCE_BYTES,
+  outputExtension,
+  unreadableImageMessage,
+} from "@/lib/image-utils";
 
 type Decoded = { source: CanvasImageSource; width: number; height: number; release: () => void };
 
-function loadImage(src: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const image = new window.Image();
-    image.decoding = "async";
-    image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error("decode failed"));
-    image.src = src;
+/** Gives up on a decode step after this long (very slow phones still finish well inside it). */
+const DECODE_TIMEOUT_MS = 25000;
+
+function withTimeout<T>(promise: Promise<T>, ms = DECODE_TIMEOUT_MS): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = window.setTimeout(() => reject(new Error("timeout")), ms);
+    promise.then(
+      (value) => {
+        window.clearTimeout(timer);
+        resolve(value);
+      },
+      (error: unknown) => {
+        window.clearTimeout(timer);
+        reject(error);
+      }
+    );
   });
+}
+
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return withTimeout(
+    new Promise((resolve, reject) => {
+      const image = new window.Image();
+      image.decoding = "async";
+      image.onload = () => resolve(image);
+      image.onerror = () => reject(new Error("decode failed"));
+      image.src = src;
+    })
+  );
 }
 
 function readAsDataUrl(file: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(reader.error ?? new Error("read failed"));
-    reader.readAsDataURL(file);
-  });
+  return withTimeout(
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => reject(reader.error ?? new Error("read failed"));
+      reader.readAsDataURL(file);
+    })
+  );
 }
 
-async function decode(file: Blob): Promise<Decoded> {
+/**
+ * Width and height as displayed (EXIF orientation applied), without decoding the pixels:
+ * browsers only parse the header to fire `load`; the bitmap is decoded when drawn.
+ */
+async function readDisplaySize(file: Blob): Promise<{ width: number; height: number } | null> {
+  const objectUrl = URL.createObjectURL(file);
+  try {
+    const image = await loadImage(objectUrl);
+    return image.naturalWidth > 0 && image.naturalHeight > 0
+      ? { width: image.naturalWidth, height: image.naturalHeight }
+      : null;
+  } catch {
+    return null;
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
+/** Decodes straight to the target size (low memory). Null when the browser can't. */
+async function decodeResized(file: Blob, maxSize: number): Promise<Decoded | null> {
+  if (typeof window.createImageBitmap !== "function") return null;
+  const size = await readDisplaySize(file);
+  if (!size) return null;
+  const target = fitWithin(size.width, size.height, maxSize);
+  try {
+    const bitmap = await withTimeout(
+      window.createImageBitmap(file, {
+        imageOrientation: "from-image",
+        resizeWidth: target.width,
+        resizeHeight: target.height,
+        resizeQuality: "high",
+      })
+    );
+    // Browsers that ignore the resize options return the full-size bitmap: still usable.
+    if (bitmap.width > 0 && bitmap.height > 0) {
+      return { source: bitmap, width: bitmap.width, height: bitmap.height, release: () => bitmap.close() };
+    }
+    bitmap.close();
+  } catch {
+    // fall through to a full decode
+  }
+  return null;
+}
+
+async function decodeFull(file: Blob): Promise<Decoded> {
   // 1. createImageBitmap
   if (typeof window.createImageBitmap === "function") {
     try {
       let bitmap: ImageBitmap;
       try {
-        bitmap = await window.createImageBitmap(file, { imageOrientation: "from-image" });
+        bitmap = await withTimeout(window.createImageBitmap(file, { imageOrientation: "from-image" }));
       } catch {
-        bitmap = await window.createImageBitmap(file); // older Safari rejects the options bag
+        bitmap = await withTimeout(window.createImageBitmap(file)); // older Safari rejects the options bag
       }
       if (bitmap.width > 0 && bitmap.height > 0) {
         return { source: bitmap, width: bitmap.width, height: bitmap.height, release: () => bitmap.close() };
@@ -69,20 +152,19 @@ async function decode(file: Blob): Promise<Decoded> {
   return { source: image, width: image.naturalWidth, height: image.naturalHeight, release: () => undefined };
 }
 
-/** Draws any decodable image into a JPEG data URL no larger than maxSize on its longest edge. */
-export async function compressImageToDataUrl(
-  file: File | Blob,
-  maxSize = MAX_IMAGE_EDGE,
-  quality = JPEG_QUALITY
-): Promise<string> {
-  const meta = {
-    name: "name" in file ? file.name : "photo",
-    type: file.type,
-    size: file.size,
-  };
+async function decode(file: Blob, maxSize: number): Promise<Decoded> {
+  return (await decodeResized(file, maxSize)) ?? decodeFull(file);
+}
 
+function fileMeta(file: File | Blob) {
+  return { name: "name" in file && file.name ? file.name : "photo", type: file.type, size: file.size };
+}
+
+/** Validates, decodes and draws the photo onto a white canvas no larger than maxSize. */
+async function drawToCanvas(file: File | Blob, maxSize: number): Promise<HTMLCanvasElement> {
+  const meta = fileMeta(file);
   if (!isAcceptableImageFile(meta)) {
-    throw new Error(`"${meta.name}" isn't a photo. Please choose a JPG, PNG, WEBP or HEIC image.`);
+    throw new Error(`"${meta.name}" isn't a photo. Please choose a JPG, PNG or WEBP image.`);
   }
   if (meta.size > MAX_SOURCE_BYTES) {
     throw new Error(`"${meta.name}" is too large (over 40 MB). Please choose a smaller photo.`);
@@ -90,13 +172,9 @@ export async function compressImageToDataUrl(
 
   let decoded: Decoded;
   try {
-    decoded = await decode(file);
+    decoded = await decode(file, maxSize);
   } catch {
-    throw new Error(
-      isHeicFile(meta)
-        ? `"${meta.name}" is a HEIC photo this browser can't open. On iPhone, pick it from Photos in Safari (it converts automatically), or set Settings → Camera → Formats → Most Compatible.`
-        : `We couldn't open "${meta.name}". Please try a different photo.`
-    );
+    throw new Error(unreadableImageMessage(meta.name, isHeicFile(meta), navigator.userAgent));
   }
 
   try {
@@ -111,17 +189,56 @@ export async function compressImageToDataUrl(
     context.fillRect(0, 0, width, height);
     context.imageSmoothingQuality = "high";
     context.drawImage(decoded.source, 0, 0, width, height);
-
-    const dataUrl = canvas.toDataURL("image/jpeg", quality);
-    if (!dataUrl.startsWith("data:image/")) {
-      throw new Error(`We couldn't process "${meta.name}". Please try a different photo.`);
-    }
-    // Free the canvas memory quickly on phones.
-    canvas.width = 0;
-    canvas.height = 0;
-    return dataUrl;
+    return canvas;
   } finally {
     decoded.release();
+  }
+}
+
+/** Frees canvas memory quickly on phones. */
+function releaseCanvas(canvas: HTMLCanvasElement) {
+  canvas.width = 0;
+  canvas.height = 0;
+}
+
+/** Any decodable photo -> compressed WebP/JPEG data URL, at most maxSize px on its longest edge. */
+export async function compressImageToDataUrl(
+  file: File | Blob,
+  maxSize = MAX_IMAGE_EDGE,
+  quality = JPEG_QUALITY
+): Promise<string> {
+  const canvas = await drawToCanvas(file, maxSize);
+  try {
+    // WebP is ~30% smaller than JPEG at the same quality; browsers that can't encode it
+    // (older Safari) silently return PNG, so check and fall back to JPEG.
+    let dataUrl = canvas.toDataURL("image/webp", quality);
+    if (!dataUrl.startsWith("data:image/webp")) dataUrl = canvas.toDataURL("image/jpeg", quality);
+    if (!dataUrl.startsWith("data:image/")) {
+      throw new Error(`We couldn't process "${fileMeta(file).name}". Please try a different photo.`);
+    }
+    return dataUrl;
+  } finally {
+    releaseCanvas(canvas);
+  }
+}
+
+/** Same as compressImageToDataUrl, as a File ready for a multipart upload (http API). */
+export async function compressImageToFile(
+  file: File | Blob,
+  maxSize = MAX_IMAGE_EDGE,
+  quality = JPEG_QUALITY
+): Promise<File> {
+  const canvas = await drawToCanvas(file, maxSize);
+  try {
+    const toBlob = (type: string) =>
+      new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, type, quality));
+    let blob = await toBlob("image/webp");
+    if (!blob || blob.type !== "image/webp") blob = await toBlob("image/jpeg");
+    if (!blob) throw new Error(`We couldn't process "${fileMeta(file).name}". Please try a different photo.`);
+    const base = fileMeta(file).name.replace(/\.[^.]+$/, "") || "photo";
+    return new File([blob], `${base}.${outputExtension(blob.type)}`, { type: blob.type });
+  } finally {
+    releaseCanvas(canvas);
   }
 }
 

@@ -29,7 +29,7 @@ src/lib/
 ├── payments/
 │   └── fairsure.ts    ← browser-only: loads the Fairsure inline script and opens the modal (public key only)
 ├── image-utils.ts     ← pure photo helpers (size limits, reorder, chips) — unit-tested
-├── image-compress.ts  ← browser photo compression (max 1200px JPEG 0.8, HEIC-aware)
+├── image-compress.ts  ← browser photo compression (max 1200px WebP, JPEG fallback, q 0.8; low-memory decode)
 ├── commission.ts      ← how a line is split between seller and platform
 └── api/
     ├── contract.ts    ← the DataApi interface: the full list of operations
@@ -387,10 +387,13 @@ GMV = sum of order subtotals; all money figures exclude cancelled orders.
 
 The "New listing" form uploads each photo **one at a time** before submitting the listing:
 
-- The browser first compresses every photo to a **JPEG, max 1200px on the longest edge, quality 0.8**
-  (`src/lib/image-compress.ts`, which also handles HEIC from iPhones and EXIF rotation). Uploads are therefore small (~150–400 KB).
+- The browser first compresses every photo (`compressImageToFile` in `src/lib/image-compress.ts`, called by
+  `http.ts`) to **max 1200px on the longest edge, quality 0.8, as WebP** (`image/webp`, file name `*.webp`), or
+  **JPEG** (`*.jpg`) on browsers that can't encode WebP (older Safari). It decodes big phone photos straight to
+  that size (no full-resolution bitmap, so mid-range Android phones don't run out of memory), applies EXIF
+  rotation, and opens HEIC where the browser can (iPhone Safari). Uploads are therefore small (~100–400 KB).
 - `POST /uploads` with `multipart/form-data`, field name **`file`**, seller token required.
-- Accept `image/jpeg`, `image/png`, `image/webp`; limit size (e.g. 8 MB).
+- Accept `image/webp`, `image/jpeg` and `image/png`; limit size (e.g. 8 MB).
 - Store in Vercel Blob / S3 / Cloudinary / Supabase Storage and return a public HTTPS URL: `{ "url": "https://cdn.example.com/u/abc.jpg" }`.
 - The listing body (#9) then contains those URLs in `images` and `colors[].image`.
 - Add your storage domain to `images.remotePatterns` in `next.config.ts` so `next/image` can display it.
@@ -461,7 +464,13 @@ All are in `.env.example`. Use test keys with `sandbox`, live keys with `live`; 
 2. Your server creates the order (`pending`) from database prices and returns `CheckoutInit`
    `{ orderId, ref, amount, currency: "NGN", publicKey, narration }`.
 3. The browser loads the Fairsure inline script (`src/lib/payments/fairsure.ts`) and calls
-   `window.FairsureCheckout.setup({ key: publicKey, email, amount, currency: "NGN", first_name, last_name, phone_number, customerId: email, ref, narration, callback_url, onSuccess, onError, onClose })`.
+   `window.FairsureCheckout.setup({ key: publicKey, email, amount, currency: "NGN", first_name, last_name, phone_number, customerId: email, ref, narration, callback_url, paymentMethod, onSuccess, onError, onClose })`.
+   **`paymentMethod`** opens the modal straight on one channel: `"bankCard"` (checkout choice *Card*) or
+   `"bankTransfer"` (choice *Bank transfer*); `"ussd"` is also accepted. It is not in the public docs, but the inline
+   script and Fairsure's WordPress plugin (`payment_method="bankCard"`) support it: the script adds `?paymentMethod=`
+   to the hosted checkout URL and sends it in the postMessage payload. Other values are ignored (the buyer sees the
+   method picker). The buyer can still switch method inside the modal, so `CreateOrderInput.paymentMethod` is the
+   buyer's *intended* channel, not proof of how they paid: read the channel from the verified transaction.
 4. `onSuccess(r)` (`r.transactionRef`, `r.amount`, `r.paymentReference`) → the browser goes to
    `/checkout/success?order=<ref>&tx=<transactionRef>`. That page calls `api.confirmPayment(ref, transactionRef)` →
    **`POST /orders/:ref/confirm`**, and shows paid / awaiting confirmation / failed from your answer.
@@ -877,9 +886,9 @@ up by its (unguessable) reference with the service role and returns only that or
   create policy "sellers delete own" on storage.objects for delete to authenticated
     using (bucket_id = 'product-images' and (storage.foldername(name))[2] = auth.uid()::text);
   ```
-- `uploadListingImage(file)`: compress in the browser first (reuse `compressImageToDataUrl` from
-  `src/lib/image-compress.ts`, then `await (await fetch(dataUrl)).blob()`), upload with
-  `contentType: "image/jpeg"`, and return `getPublicUrl(path).data.publicUrl`.
+- `uploadListingImage(file)`: compress in the browser first (`compressImageToFile` from
+  `src/lib/image-compress.ts`), upload with `contentType: compressed.type` (`image/webp` or `image/jpeg`),
+  and return `getPublicUrl(path).data.publicUrl`.
 
 
 ### A.6 Mapping: each API function → Supabase
@@ -895,7 +904,7 @@ up by its (unguessable) reference with the service role and returns only that or
 | `getCurrentSeller()` | `auth.getUser()` → `from('sellers').select('*').eq('id', uid).maybeSingle()` (bank details: masked, via a server route or omitted) |
 | `getSellerListings()` | `from('products').select('*, product_colours(*)').eq('seller_id', uid).order('created_at',{ascending:false})` |
 | `createListing(input)` | insert `products` (`status:'pending'`, `seller_id: uid`, `seller_name`, unique `slug`) then insert `product_colours` |
-| `uploadListingImage(file)` | compress → `storage.from('product-images').upload('sellers/<uid>/<uuid>.jpg', blob)` → `getPublicUrl` |
+| `uploadListingImage(file)` | compress → `storage.from('product-images').upload('sellers/<uid>/<uuid>.webp', compressed)` → `getPublicUrl` |
 | `getSellerOrders()` | `from('order_items').select('*, orders(reference,status,created_at,customer)').eq('seller_id', uid)` grouped per order into `SellerOrderView` |
 | `loginAdmin(email, pw)` | `auth.signInWithPassword` → require `profiles.role = 'admin'` (else sign out + 403) |
 | `getAdminSession()` | `auth.getSession()` + `profiles` role check → `{ token, email, name }` or `null` |

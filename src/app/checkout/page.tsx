@@ -23,7 +23,7 @@ import { useStore } from "@/components/store-provider";
 import { initCheckout } from "@/lib/api";
 import { writeJSON } from "@/lib/client-storage";
 import { SHIPPING_RATES, SITE_NAME, USE_MOCK_API } from "@/lib/config";
-import { openFairsureCheckout, resolvePublicKey, splitName, toE164Nigeria } from "@/lib/payments/fairsure";
+import { FAIRSURE_METHOD_FOR, openFairsureCheckout, resolvePublicKey, splitName, toE164Nigeria } from "@/lib/payments/fairsure";
 import { formatLineOptions, formatPrice } from "@/lib/format";
 
 const NIGERIAN_STATES = [
@@ -423,6 +423,8 @@ export default function CheckoutPage() {
         ref: init.ref,
         narration: init.narration || `${SITE_NAME} order ${init.ref}`,
         callback_url: `${window.location.origin}${successUrl()}`,
+        // Open the modal on the tab the buyer chose here (card -> bankCard, transfer -> bankTransfer).
+        paymentMethod: FAIRSURE_METHOD_FOR[form.paymentMethod],
         onSuccess: (response) => {
           // UX hint only: the success page asks the server to verify the payment
           // and empties the bag once the payment is not "failed".
@@ -850,14 +852,14 @@ export default function CheckoutPage() {
                     id: "card" as const,
                     title: "Pay with Card",
                     description:
-                      "Pay by card in the secure Fairsure payment window.",
+                      "The secure Fairsure window opens straight on card payment.",
                     Icon: CreditCard,
                   },
                   {
                     id: "transfer" as const,
                     title: "Bank Transfer",
                     description:
-                      "Get transfer details in the secure Fairsure payment window.",
+                      "The secure Fairsure window opens with an account number to transfer to.",
                     Icon: Landmark,
                   },
                 ]).map(({ id, title, description, Icon }) => (

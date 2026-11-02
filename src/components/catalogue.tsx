@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
-import { ArrowRight, Filter, RotateCcw, Search, SlidersHorizontal, Store } from "lucide-react";
+import { useId, useMemo, useState } from "react";
+import { ArrowRight, ChevronDown, Filter, RotateCcw, Search, SlidersHorizontal, Store } from "lucide-react";
 
 import { ProductGrid, ProductGridSkeleton } from "@/components/product-card";
 import { useAsync } from "@/hooks/use-async";
@@ -11,11 +11,16 @@ import { getProducts } from "@/lib/api";
 import { categoryHref } from "@/lib/categories";
 import { PLATFORM_SELLER_ID, SITE_NAME, categoryName, type CategorySlug } from "@/lib/config";
 import { formatPrice } from "@/lib/format";
+import { SORT_OPTIONS, sortProducts, type SortKey } from "@/lib/product-sort";
 import { seedProducts } from "@/lib/seed-data";
 import type { Gender } from "@/lib/types";
 
 const MAX_PRICE = 100000;
 const MIN_PRICE = 10000;
+/** Products per "page"; "Load more" adds another page. */
+const PAGE_SIZE = 24;
+/** Cards in the first row(s) render visible immediately (no waiting on the scroll reveal). */
+const EAGER_CARDS = 4;
 
 export type SoldBy = "all" | "platform" | "marketplace";
 
@@ -47,25 +52,31 @@ const chipOff = "border-[color:var(--brand-border)] bg-white text-[color:var(--b
 
 /**
  * The product listing used by /shop (all products) and /category/[slug] (one category).
- * Filters: category chips (only categories with approved products), gender, sold by, search,
- * sort and a price cap.
+ * Products first: a short title, the category chips, one compact toolbar (Refine · count · Sort),
+ * then the grid. The Refine panel (gender, sold by, search, price cap) is folded away until
+ * opened, or opens on its own when the URL already carries a filter.
  */
 export function Catalogue({
   category,
   initialSearch = "",
   initialGender = "all",
   initialSoldBy = "all",
+  initialSort = "discover",
 }: {
   category?: CategorySlug;
   initialSearch?: string;
   initialGender?: Gender | "all";
   initialSoldBy?: SoldBy;
+  initialSort?: SortKey;
 }) {
   const [searchTerm, setSearchTerm] = useState(initialSearch);
   const [selectedGender, setSelectedGender] = useState<Gender | "all">(initialGender);
   const [soldBy, setSoldBy] = useState<SoldBy>(initialSoldBy);
-  const [sortBy, setSortBy] = useState("featured");
+  const [sortBy, setSortBy] = useState<SortKey>(initialSort);
   const [maxPrice, setMaxPrice] = useState(MAX_PRICE);
+  const [refineOpen, setRefineOpen] = useState(initialGender !== "all" || initialSoldBy !== "all" || Boolean(initialSearch));
+  const [pages, setPages] = useState(1);
+  const refineId = useId();
   const categories = useNonEmptyCategories();
 
   const initialProducts = useMemo(
@@ -101,35 +112,31 @@ export function Catalogue({
       return matchesGender && matchesSeller && matchesPrice && matchesSearch;
     });
 
-    switch (sortBy) {
-      case "low-to-high":
-        return [...nextProducts].sort((a, b) => a.price - b.price);
-      case "high-to-low":
-        return [...nextProducts].sort((a, b) => b.price - a.price);
-      case "newest":
-        return [...nextProducts].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-      default:
-        return [...nextProducts].sort((a, b) => Number(b.featured) - Number(a.featured));
-    }
+    return sortProducts(nextProducts, sortBy);
   }, [products, maxPrice, searchTerm, selectedGender, soldBy, sortBy]);
 
   const genderLabel = genderTabs.find((tab) => tab.value === selectedGender)?.label;
   const title = category ? categoryName(category) : "All products";
-  const hasFilters = selectedGender !== "all" || soldBy !== "all" || Boolean(searchTerm) || maxPrice < MAX_PRICE || sortBy !== "featured";
+  const activeFilterCount =
+    Number(selectedGender !== "all") + Number(soldBy !== "all") + Number(Boolean(searchTerm)) + Number(maxPrice < MAX_PRICE);
+  const hasFilters = activeFilterCount > 0 || sortBy !== "discover";
+  const visibleProducts = filteredProducts.slice(0, pages * PAGE_SIZE);
+  const remaining = filteredProducts.length - visibleProducts.length;
 
   const handleReset = () => {
     setSelectedGender("all");
     setSoldBy("all");
     setSearchTerm("");
-    setSortBy("featured");
+    setSortBy("discover");
     setMaxPrice(MAX_PRICE);
+    setPages(1);
   };
 
   const categoryIsEmpty = Boolean(category) && !loading && products.length === 0;
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
-      <div className="mb-6 flex flex-col gap-3 border-b border-[color:var(--brand-border)] pb-6 sm:mb-8 sm:flex-row sm:items-end sm:justify-between">
+      <div className="mb-4 flex flex-col gap-2 border-b border-[color:var(--brand-border)] pb-4 sm:mb-5 sm:flex-row sm:items-end sm:justify-between sm:pb-5">
         <div>
           <span className="text-xs font-bold uppercase tracking-[0.2em] text-[color:var(--brand-primary)]">
             {category ? (
@@ -143,7 +150,7 @@ export function Catalogue({
               "Shop"
             )}
           </span>
-          <h1 className="font-display mt-2 text-4xl text-[color:var(--brand-deep)] sm:text-5xl">
+          <h1 className="font-display mt-1 text-3xl text-[color:var(--brand-deep)] sm:text-5xl">
             {title}
             {selectedGender !== "all" && <span className="text-[color:var(--brand-primary)]"> · {genderLabel}</span>}
           </h1>
@@ -153,11 +160,6 @@ export function Catalogue({
               : `Clothing, shoes, bags and accessories from ${SITE_NAME} and approved independent sellers.`}
           </p>
         </div>
-        {!categoryIsEmpty && (
-          <span className="text-xs font-medium uppercase tracking-wider text-[color:var(--brand-charcoal)]/60">
-            Showing <strong className="font-bold text-[color:var(--brand-deep)]">{filteredProducts.length}</strong> products
-          </span>
-        )}
       </div>
 
       {/* Category chips: only categories that have approved products */}
@@ -186,7 +188,54 @@ export function Catalogue({
         <EmptyCategory name={title} />
       ) : (
         <>
-          <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          {/* One compact toolbar: Refine (folds the filters away), item count, sort. */}
+          <div className="mb-4 flex flex-wrap items-center gap-2 sm:gap-3">
+            <button
+              type="button"
+              aria-expanded={refineOpen}
+              aria-controls={refineId}
+              onClick={() => setRefineOpen((open) => !open)}
+              className={`${chipBase} gap-2 ${refineOpen || activeFilterCount > 0 ? chipOn : chipOff}`}
+            >
+              <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
+              Refine
+              {activeFilterCount > 0 && (
+                <span className="rounded-full bg-white/25 px-1.5 text-[10px]" aria-label={`${activeFilterCount} active`}>
+                  {activeFilterCount}
+                </span>
+              )}
+              <ChevronDown className={`h-3.5 w-3.5 transition-transform ${refineOpen ? "rotate-180" : ""}`} aria-hidden="true" />
+            </button>
+            <span className="text-xs font-medium uppercase tracking-wider text-[color:var(--brand-charcoal)]/60" aria-live="polite">
+              <strong className="font-bold text-[color:var(--brand-deep)]">{filteredProducts.length}</strong>{" "}
+              {filteredProducts.length === 1 ? "item" : "items"}
+            </span>
+            <label htmlFor="catalogue-sort" className="ml-auto flex min-h-11 items-center gap-2 rounded-full border border-[color:var(--brand-border)] bg-white pl-3.5 pr-2">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-[color:var(--brand-charcoal)]/60">Sort</span>
+              <select
+                id="catalogue-sort"
+                value={sortBy}
+                onChange={(e) => {
+                  setSortBy(e.target.value as SortKey);
+                  setPages(1);
+                }}
+                className="min-h-10 max-w-[11rem] cursor-pointer bg-transparent text-base font-semibold text-[color:var(--brand-deep)] focus:outline-none sm:text-sm"
+              >
+                {SORT_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <div
+            id={refineId}
+            hidden={!refineOpen}
+            className="rf-pop mb-6 rounded-3xl border border-[color:var(--brand-border)] bg-[color:var(--brand-white)] p-4 shadow-[0_12px_30px_rgba(91,64,50,0.04)] sm:p-5"
+          >
+            <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div role="group" aria-label="Gender" className="flex w-full gap-1 overflow-x-auto rounded-full border border-[color:var(--brand-border)] bg-white p-1 scrollbar-none md:w-fit">
               {genderTabs.map((tab) => (
                 <button
@@ -221,11 +270,8 @@ export function Catalogue({
                 </button>
               ))}
             </div>
-          </div>
-
-          {/* Search, sort, price */}
-          <div className="mb-8 rounded-3xl border border-[color:var(--brand-border)] bg-[color:var(--brand-white)] p-4 shadow-[0_12px_30px_rgba(91,64,50,0.04)] sm:p-5">
-            <div className="grid items-end gap-4 md:grid-cols-[repeat(3,minmax(0,1fr))] lg:grid-cols-[1.2fr_0.8fr_1fr]">
+            </div>
+            <div className="grid items-end gap-4 md:grid-cols-[repeat(2,minmax(0,1fr))]">
               <div>
                 <label htmlFor="catalogue-search" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[color:var(--brand-deep)]">
                   Search
@@ -240,26 +286,6 @@ export function Catalogue({
                     placeholder="Search by name, colour, seller..."
                     className="w-full min-w-0 bg-transparent text-base text-[color:var(--brand-charcoal)] placeholder:text-[color:var(--brand-charcoal)]/45 focus:outline-none sm:text-sm"
                   />
-                </div>
-              </div>
-
-              <div>
-                <label htmlFor="catalogue-sort" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[color:var(--brand-deep)]">
-                  Sort by
-                </label>
-                <div className="flex min-h-11 items-center gap-2 rounded-2xl border border-[color:var(--brand-border)] bg-[color:var(--brand-cream)] px-3.5">
-                  <SlidersHorizontal className="h-4 w-4 shrink-0 text-[color:var(--brand-chocolate)]/60" />
-                  <select
-                    id="catalogue-sort"
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
-                    className="min-h-10 w-full cursor-pointer bg-transparent text-base font-medium text-[color:var(--brand-charcoal)] focus:outline-none sm:text-sm"
-                  >
-                    <option value="featured">Featured picks</option>
-                    <option value="newest">Newest arrivals</option>
-                    <option value="low-to-high">Price: low to high</option>
-                    <option value="high-to-low">Price: high to low</option>
-                  </select>
                 </div>
               </div>
 
@@ -310,7 +336,23 @@ export function Catalogue({
           {loading && products.length === 0 ? (
             <ProductGridSkeleton count={8} />
           ) : filteredProducts.length > 0 ? (
-            <ProductGrid products={filteredProducts} />
+            <>
+              <ProductGrid products={visibleProducts} eagerCount={EAGER_CARDS} />
+              {remaining > 0 && (
+                <div className="mt-8 flex flex-col items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPages((value) => value + 1)}
+                    className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-[color:var(--brand-deep)]/25 bg-white px-8 text-xs font-bold uppercase tracking-wider text-[color:var(--brand-deep)] transition hover:bg-[color:var(--brand-soft)]/50"
+                  >
+                    Load more
+                  </button>
+                  <span className="text-xs text-[color:var(--brand-charcoal)]/60">
+                    Showing {visibleProducts.length} of {filteredProducts.length}
+                  </span>
+                </div>
+              )}
+            </>
           ) : soldBy === "marketplace" && !hasOtherFilters(selectedGender, searchTerm, maxPrice) ? (
             <EmptyMarketplace />
           ) : (

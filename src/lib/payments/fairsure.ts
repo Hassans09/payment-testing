@@ -25,6 +25,21 @@ export type FairsureSuccess = {
   [key: string]: unknown;
 };
 
+/**
+ * Payment channel the Fairsure modal opens on. Not in the public docs, but supported by the
+ * inline script (`paymentMethod` / `payment_method` option, forwarded to the hosted checkout as
+ * `?paymentMethod=` and in the postMessage payload) and by Fairsure's WordPress plugin
+ * (`payment_method="bankCard"`). Any other value is ignored and the buyer sees the method picker.
+ */
+export type FairsurePaymentMethod = "bankCard" | "bankTransfer" | "ussd";
+
+/** Maps the store's checkout choice to the Fairsure channel. */
+export const FAIRSURE_METHOD_FOR = {
+  card: "bankCard",
+  transfer: "bankTransfer",
+  ussd: "ussd",
+} as const satisfies Record<string, FairsurePaymentMethod>;
+
 export type FairsureError = { message?: string; [key: string]: unknown };
 
 export type FairsureSetupOptions = {
@@ -40,6 +55,8 @@ export type FairsureSetupOptions = {
   ref: string;
   narration?: string;
   callback_url?: string;
+  /** Opens the modal straight on this channel (the buyer can still switch inside the modal). */
+  paymentMethod?: FairsurePaymentMethod;
   onSuccess?: (response: FairsureSuccess) => void;
   onError?: (response: FairsureError) => void;
   onClose?: () => void;

@@ -75,6 +75,7 @@ export function Header() {
 
   const shopLinks = [
     { href: "/shop", label: "All products" },
+    { href: "/shop?sort=newest", label: "New arrivals" },
     ...categories.map((category) => ({ href: categoryHref(category.slug), label: category.name })),
     { href: "/shop?sold=marketplace", label: "From our sellers" },
   ];

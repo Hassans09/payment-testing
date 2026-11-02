@@ -11,7 +11,7 @@ import { PLATFORM_SELLER_ID } from "@/lib/config";
 import { formatPrice, productLabel } from "@/lib/format";
 import type { Product } from "@/lib/types";
 
-export function ProductCard({ product }: { product: Product }) {
+export function ProductCard({ product, eager = false }: { product: Product; eager?: boolean }) {
   const { isWishlisted, toggleWishlist } = useStore();
   const [optionsOpen, setOptionsOpen] = useState(false);
   const hoverImage = product.images[1] ?? product.colors[1]?.image;
@@ -26,6 +26,9 @@ export function ProductCard({ product }: { product: Product }) {
 
   return (
     <article
+      // First-row cards are marked revealed from the server render, so they are never hidden
+      // waiting for the scroll-reveal script (see src/components/scroll-reveal.tsx).
+      data-revealed={eager ? "" : undefined}
       className="group relative flex min-w-0 flex-col justify-between overflow-hidden rounded-[18px] border sm:rounded-[26px] border-[color:var(--brand-border)] bg-white shadow-[0_12px_35px_rgba(91,64,50,0.06)] motion-card-float"
     >
       <div className="relative">
@@ -38,6 +41,7 @@ export function ProductCard({ product }: { product: Product }) {
               src={product.images[0]}
               alt={product.name}
               fill
+              loading={eager ? "eager" : undefined}
               sizes="(max-width: 1024px) 50vw, 25vw"
               className={`object-cover object-top transition duration-700 ease-out group-hover:scale-105 ${hoverImage ? "group-hover:opacity-0" : ""}`}
             />
@@ -158,11 +162,11 @@ export const PRODUCT_GRID_CLASS =
   "grid grid-cols-[repeat(2,minmax(0,1fr))] gap-3 sm:gap-5 lg:grid-cols-[repeat(3,minmax(0,1fr))] xl:grid-cols-[repeat(4,minmax(0,1fr))]";
 
 /** A grid of product cards that float in, slightly staggered, as they scroll into view. */
-export function ProductGrid({ products }: { products: Product[] }) {
+export function ProductGrid({ products, eagerCount = 0 }: { products: Product[]; eagerCount?: number }) {
   return (
     <div className={PRODUCT_GRID_CLASS} data-reveal-stagger>
-      {products.map((product) => (
-        <ProductCard key={product.id} product={product} />
+      {products.map((product, index) => (
+        <ProductCard key={product.id} product={product} eager={index < eagerCount} />
       ))}
     </div>
   );

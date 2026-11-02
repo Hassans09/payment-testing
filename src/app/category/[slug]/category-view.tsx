@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 
 import { Catalogue, parseGender, parseSoldBy } from "@/components/catalogue";
 import { ProductGridSkeleton } from "@/components/product-card";
+import { parseSort } from "@/lib/product-sort";
 import type { CategorySlug } from "@/lib/config";
 
 export function CategoryView({ slug }: { slug: CategorySlug }) {
@@ -25,6 +26,7 @@ function CategoryWithParams({ slug }: { slug: CategorySlug }) {
   const params = useSearchParams();
   const gender = parseGender(params.get("gender"));
   const soldBy = parseSoldBy(params.get("sold"));
+  const sort = parseSort(params.get("sort"));
   const search = params.get("search") ?? "";
-  return <Catalogue key={`${slug}:${gender}:${soldBy}:${search}`} category={slug} initialGender={gender} initialSoldBy={soldBy} initialSearch={search} />;
+  return <Catalogue key={`${slug}:${gender}:${soldBy}:${sort}:${search}`} category={slug} initialGender={gender} initialSoldBy={soldBy} initialSearch={search} initialSort={sort} />;
 }

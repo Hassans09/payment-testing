@@ -8,6 +8,7 @@
  */
 import { API_BASE_URL } from "@/lib/config";
 import { readString, removeKey, writeString } from "@/lib/client-storage";
+import { compressImageToFile } from "@/lib/image-compress";
 import type {
   AdminOverview,
   AdminSession,
@@ -116,8 +117,9 @@ export const httpApi: DataApi = {
   getSellerListings: () => request<Product[]>("/sellers/me/listings", { auth: "seller" }),
   createListing: (input) => request<Product>("/sellers/me/listings", { method: "POST", body: input, auth: "seller" }),
   async uploadListingImage(file) {
+    // Phones upload a ~200 KB 1200px WebP/JPEG instead of the 5–15 MB original.
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append("file", await compressImageToFile(file));
     const result = await request<{ url: string }>("/uploads", { method: "POST", formData, auth: "seller" });
     return result.url;
   },

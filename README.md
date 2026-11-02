@@ -66,7 +66,7 @@ The frontend is being developed separately from the backend integration, so some
 - Customer contact and delivery information
 - Nigerian states and Federal Capital Territory selection
 - Standard and priority shipping options
-- Card and bank transfer via the Fairsure inline checkout (sandbox or live); demo payment when no public key is set
+- Card and bank transfer via the Fairsure inline checkout (sandbox or live); the modal opens on the method the buyer picked (`paymentMethod: "bankCard" | "bankTransfer"`, see BACKEND.md); demo payment when no public key is set
 - Form validation and user-friendly error messages
 - Optional current-location detection for delivery details
 - Editable delivery address fields

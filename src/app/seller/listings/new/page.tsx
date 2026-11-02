@@ -12,7 +12,7 @@ import { useSellerSession } from "@/hooks/use-session";
 import { createListing, uploadListingImage } from "@/lib/api";
 import { CATEGORIES, PLATFORM_COMMISSION_PERCENT, isCategorySlug, type CategorySlug } from "@/lib/config";
 import { formatPrice } from "@/lib/format";
-import { moveItem } from "@/lib/image-utils";
+import { moveItem, PHOTO_ACCEPT } from "@/lib/image-utils";
 import type { ColorVariant, Gender } from "@/lib/types";
 
 const MAX_IMAGES = 8;
@@ -173,7 +173,7 @@ export default function NewListingPage() {
         <Card>
           <h2 className="text-sm font-bold uppercase tracking-wider text-[color:var(--brand-deep)]">Photos</h2>
           <p className="mt-1 text-xs text-[color:var(--brand-charcoal)]/60">
-            Up to {MAX_IMAGES} photos (JPG, PNG, WEBP or HEIC). You can pick several at once. The first photo is the cover; use the arrows to reorder.
+            Up to {MAX_IMAGES} photos (JPG, PNG or WEBP; big phone photos are shrunk for you). You can pick several at once. The first photo is the cover; use the arrows to reorder.
           </p>
           <div className="mt-4 grid grid-cols-[repeat(3,minmax(0,1fr))] gap-3 sm:grid-cols-4">
             {images.map((src, index) => (
@@ -245,7 +245,7 @@ export default function NewListingPage() {
           <input
             id="listing-photos"
             type="file"
-            accept="image/*,.heic,.heif"
+            accept={PHOTO_ACCEPT}
             multiple
             className="sr-only"
             onChange={handleImages}
@@ -376,7 +376,7 @@ export default function NewListingPage() {
                   ) : (
                     <ImagePlus className="h-4 w-4" />
                   )}
-                  <input type="file" accept="image/*,.heic,.heif" className="sr-only" onChange={(e) => handleColorImage(color.key, e)} disabled={uploading} />
+                  <input type="file" accept={PHOTO_ACCEPT} className="sr-only" onChange={(e) => handleColorImage(color.key, e)} disabled={uploading} />
                 </label>
                 {color.image && (
                   <button

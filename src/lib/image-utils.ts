@@ -1,11 +1,11 @@
 /**
  * Pure helpers for listing photos (no DOM), kept separate so they can be unit-tested
- * in Node (see scripts/test-image-utils.mjs).
+ * in Node (see scripts/test-image-upload.mjs).
  */
 
 /** Longest edge, in pixels, of a photo after client-side compression. */
 export const MAX_IMAGE_EDGE = 1200;
-/** JPEG quality used for compressed photos. */
+/** WebP/JPEG quality used for compressed photos. */
 export const JPEG_QUALITY = 0.8;
 /** Files bigger than this are refused before we try to decode them (phones can choke). */
 export const MAX_SOURCE_BYTES = 40 * 1024 * 1024;
@@ -27,6 +27,31 @@ export function isAcceptableImageFile(file: FileLike): boolean {
   if (file.type && file.type.startsWith("image/")) return true;
   if (!file.type || file.type === "application/octet-stream") return IMAGE_EXTENSIONS.includes(extension(file.name));
   return false;
+}
+
+/**
+ * Value for <input type="file" accept>. Only MIME types on purpose: Chrome on Android maps
+ * every extension through the OS MIME table, and one it doesn't know (".heic" on older
+ * Android) turns the photo/camera picker into the generic file browser. HEIC photos still
+ * match "image/*" on phones (their type is image/heic).
+ */
+export const PHOTO_ACCEPT = "image/*";
+
+/** File extension for an encoded output MIME type. */
+export function outputExtension(mimeType: string): string {
+  return mimeType === "image/webp" ? "webp" : mimeType === "image/png" ? "png" : "jpg";
+}
+
+/** Friendly message for a photo the browser couldn't decode, with a fix for the shopper's phone. */
+export function unreadableImageMessage(name: string, heic: boolean, userAgent = ""): string {
+  if (!heic) return `We couldn't open "${name}". Please try a different photo, or take a screenshot of it and upload that.`;
+  if (/android/i.test(userAgent)) {
+    return `"${name}" is a HEIC photo, which Chrome on Android can't open. Pick a JPG instead, or in your Camera settings turn off "High efficiency pictures" (Samsung) / HEIF, then take the photo again.`;
+  }
+  if (/iphone|ipad|ipod/i.test(userAgent)) {
+    return `"${name}" is a HEIC photo this browser can't open. Pick it from Photos in Safari (it converts automatically), or set Settings → Camera → Formats → Most Compatible.`;
+  }
+  return `"${name}" is a HEIC photo this browser can't open. Please export it as JPG (or open it in Safari) and try again.`;
 }
 
 export function isHeicFile(file: FileLike): boolean {
